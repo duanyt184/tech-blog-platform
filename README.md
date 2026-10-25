@@ -1,365 +1,398 @@
-# 码上：面向技术分享的博客与投稿协作平台
+# 码上 · 面向技术分享的博客与投稿协作平台
 
-“码上”是一个面向高校学生、技术爱好者与内容编辑的技术博客和投稿协作平台。本仓库采用前后端分离架构，目前处于 **MVP v0.1 / Issue #1（初始化项目与数据库）** 阶段，目标是给五人团队提供一套可启动、可验证、方便继续开发的基础工程。
+面向高校学生、技术爱好者与内容编辑的技术博客与投稿协作平台。用户注册登录后可以撰写文章、投稿审核、发布分享；编辑负责审核与退回。
 
-> 当前首页中的文章、分类和统计数字均标注为 **Demo 演示数据**，没有伪装成数据库查询结果。
+前后端分离架构：**Vue 3 + TypeScript + Vite** 前端，**Spring Boot 3 + MySQL 8** 后端。当前已完成项目基础工程（Issue #1）与注册 / 登录 / 退出（Issue #2）。
 
-## 当前范围
+## 当前进度
 
-### 已完成
+| Issue | 内容 | 状态 |
+| --- | --- | --- |
+| #1 | 初始化项目与数据库 | ✅ 已完成 |
+| #2 | 注册、登录、退出与真实权限控制 | ✅ 已完成 |
+| #3 | 从数据库读取文章列表与详情 | ⏳ 待开发 |
+| #4 | 纯文本文章发布 | ⏳ 待开发 |
+| #5 | 用户自己的文章管理 | ⏳ 待开发 |
+| 后续 | 投稿审核、版本历史、Markdown、评论、点赞、收藏、通知、后台统计 | 📋 规划中 |
 
-- Vue 3 + TypeScript + Vite 前端工程与响应式技术社区首页。
-- Vue Router 基础路由：`/`、`/login`、`/articles`、`/article/:id`、`/write`、`/my-articles`。
-- Axios 公共请求实例，开发环境通过 Vite 将 `/api` 代理到 Spring Boot。
-- Spring Boot 基础分层、MySQL 数据源、JPA 实体和仓库。
-- Flyway 版本化迁移，首次启动创建 `users`、`articles` 两张核心表。
-- `GET /api/health`：真实执行 `SELECT 1`；正常返回 200，异常返回不泄漏连接信息的 503。
-- MySQL 8 Docker Compose 配置、持久化数据卷、健康检查和环境变量示例。
-- 后端健康检查单元测试与 Web 层测试。
-
-### 暂未实现
-
-- Issue #2：注册、登录、退出和真实权限控制。
-- Issue #3：从数据库读取文章列表与详情。
-- Issue #4：纯文本文章发布。
-- Issue #5：用户自己的文章管理。
-- 后续迭代：投稿审核、版本历史、Markdown、评论、点赞、收藏、通知和后台统计。
-
-占位页面只负责确认路由与布局有效，没有提前实现其他成员负责的业务。
+> 首页的文章列表与分类仍是 **Demo 演示数据**，接口尚未接入数据库；`/articles`、`/article/:id`、`/write`、`/my-articles` 为占位页，只保证路由与布局可用，未提前实现其他成员负责的业务。
+>
+> 认证部分（注册 / 登录 / 退出 / 会话恢复）是**真实可用**的：数据落库、密码 BCrypt 哈希、Session 认证、路由守卫与退出失效均已通过接口与页面验证。
 
 ## 技术栈
 
-| 模块 | 技术 | 项目版本/要求 |
+| 模块 | 技术 | 版本 / 要求 |
 | --- | --- | --- |
-| 前端 | Vue、TypeScript、Vite | Vue 3.5+、TypeScript 5.9+、Vite 8 |
+| 前端框架 | Vue、TypeScript、Vite | Vue 3.5+、TypeScript 5.9+、Vite 8 |
 | 前端路由与请求 | Vue Router、Axios | Vue Router 4.6+、Axios 1.20+ |
-| UI | Element Plus（手动按需导入） | 2.14+ |
-| 后端 | Java、Spring Boot、Maven | Java 17、Spring Boot 3.5.16、Maven 3.6.3+ |
-| 数据访问 | Spring Data JPA、Flyway | 由 Spring Boot 统一管理兼容版本 |
+| UI 组件 | Element Plus（手动按需引入） | 2.14+ |
+| 后端框架 | Java、Spring Boot、Maven | Java 17 编译目标、Spring Boot 3.5.16、Maven 3.9.9（Wrapper） |
+| 安全 | Spring Security | 随 Spring Boot 版本管理，会话式认证 |
+| 数据访问 | Spring Data JPA、Flyway | 随 Spring Boot 版本管理 |
 | 数据库 | MySQL | 8.0 |
-| 本地数据库编排 | Docker Compose | Docker Desktop 或 Docker Engine + Compose v2 |
+| 本地数据库编排 | Docker Compose（可选） | Docker Desktop 或 Docker Engine + Compose v2 |
 
-Spring Boot 代码以 Java 17 为编译目标，也可使用项目兼容范围内的较新 JDK 运行。前端要求 Node.js `20.19+`（也支持满足 Vite 要求的更新 LTS/Current 版本）。
+后端以 Java 17 为编译目标，在 JDK 17/21/25 上均可运行。前端要求 Node.js `20.19+`。
 
 ## 目录结构
 
 ```text
 .
 ├─ backend/
-│  ├─ pom.xml                         # Maven 依赖与构建配置
+│  ├─ mvnw / mvnw.cmd                # Maven Wrapper：未安装 Maven 也能构建
+│  ├─ pom.xml
 │  └─ src/
-│     ├─ main/
-│     │  ├─ java/com/techblog/platform/
-│     │  │  ├─ config/                # Web/CORS 等横切配置
-│     │  │  ├─ controller/            # REST 接口层
-│     │  │  ├─ dto/                   # 请求/响应对象
-│     │  │  ├─ entity/                # JPA 实体与枚举
-│     │  │  ├─ repository/            # Spring Data 数据访问层
-│     │  │  ├─ service/               # 业务服务层
-│     │  │  └─ TechBlogApplication.java
-│     │  └─ resources/
-│     │     ├─ application.yml         # 数据源、JPA、Flyway 等配置
-│     │     └─ db/migration/           # Flyway 版本化 SQL
-│     └─ test/                         # 后端自动化测试
+│     ├─ main/java/com/techblog/platform/
+│     │  ├─ config/                  # SecurityConfig（安全）、WebConfig（CORS）
+│     │  ├─ controller/              # AuthController、HealthController
+│     │  ├─ dto/                     # 请求/响应对象（不含实体）
+│     │  ├─ entity/                  # JPA 实体与枚举：User、Article
+│     │  ├─ exception/               # 统一异常出口
+│     │  ├─ repository/              # Spring Data 仓库
+│     │  ├─ security/                # UserPrincipal、UserDetailsService、会话管理
+│     │  ├─ service/                 # 业务逻辑：AuthService、HealthService
+│     │  └─ TechBlogApplication.java
+│     ├─ main/resources/
+│     │  ├─ application.yml          # 数据源、JPA、Flyway、Session Cookie
+│     │  └─ db/migration/            # Flyway 版本化 SQL（V1__create_core_tables.sql）
+│     └─ test/java/…                 # 19 个自动化测试
 ├─ frontend/
 │  ├─ src/
-│  │  ├─ api/                          # Axios 实例与各领域 API
-│  │  ├─ components/                   # 公共组件
-│  │  ├─ router/                       # 路由定义
-│  │  ├─ styles/                       # 全局与响应式样式
-│  │  ├─ types/                        # TypeScript 类型
-│  │  └─ views/                        # 路由页面
-│  ├─ package.json
-│  └─ vite.config.ts                   # 开发服务器与 /api 代理
-├─ .env.example                        # 本地配置示例，不含生产凭据
+│  │  ├─ api/                        # http.ts（Axios 实例）、auth.ts
+│  │  ├─ components/                 # AppHeader（导航与登录态）
+│  │  ├─ composables/                 # useAuth（全局登录态）
+│  │  ├─ router/                     # 路由表 + 登录守卫
+│  │  ├─ styles/                     # global.css（设计变量）、auth.css
+│  │  ├─ types/                      # TypeScript 类型
+│  │  └─ views/                      # 7 个路由页面
+│  ├─ package.json / pnpm-lock.yaml
+│  └─ vite.config.ts                 # 开发服务器与 /api 代理
+├─ docs/
+│  ├─ issue-2-auth.md                # 认证模块实施说明（接口契约、决策、联调）
+│  └─ environment-setup-windows.docx # Windows 环境安装图文指南
+├─ .env.example                      # 本地配置示例（不含生产凭据）
 ├─ .gitignore
-├─ docker-compose.yml
+├─ docker-compose.yml                # MySQL 8（可选，替代本机 MySQL）
 └─ README.md
 ```
 
-## 环境准备
+## 快速开始
 
-推荐安装：
+### 0. 环境要求
 
-- JDK 17（可用 `java -version` 检查）。
-- Maven 3.6.3+（可用 `mvn -version` 检查）。
-- Node.js 20.19+ 与 npm（可用 `node -v`、`npm -v` 检查）。
-- Docker Desktop（Windows/macOS）或 Docker Engine + Compose v2（Linux）。
-
-如果不使用 Docker，也可以使用本机 MySQL 8.0；请参见“使用本机 MySQL”。
-
-## 快速启动（推荐：Docker MySQL）
-
-以下命令均从仓库根目录执行。数据库、后端、前端需要分别保持运行。
-
-### 1. 准备本地配置
-
-Windows PowerShell：
-
-```powershell
-Copy-Item .env.example .env
-```
-
-macOS / Linux：
-
-```bash
-cp .env.example .env
-```
-
-`.env` 已被 Git 忽略。示例中的密码只用于本地开发；共享或部署环境必须替换。若不复制 `.env`，Compose 和 Spring Boot 也有相互匹配的本地默认值。
-
-### 2. 启动 MySQL 8
-
-```bash
-docker compose up -d mysql
-docker compose ps
-```
-
-默认连接参数：
-
-| 配置 | 默认值 |
+| 依赖 | 说明 |
 | --- | --- |
-| 地址 | `localhost` |
-| 宿主机端口 | `3307` |
-| 数据库 | `tech_blog` |
-| 用户 | `tech_blog` |
-| 密码 | `tech_blog_dev_password` |
+| JDK 17+ | `java -version` 能输出即可（JDK 17/21/25 均可） |
+| Maven | **可以不装**：仓库自带 `mvnw` Wrapper，首次运行会自动下载 Maven |
+| Node.js 20.19+ | 自带 npm |
+| MySQL 8.0 | 本机安装，或用下面的 Docker Compose |
 
-容器内 MySQL 仍监听 3306，宿主机映射到 3307，避免与已安装的 MySQL 冲突。数据保存在命名卷 `tech-blog-mysql-data` 中，普通的 `docker compose down` 或容器重启不会删除数据。
-
-> `docker compose down -v` 会删除数据卷和全部数据库数据，请勿在有用数据时执行。
-
-### 3. 启动后端
-
-Windows PowerShell：
-
-```powershell
-Set-Location backend
-mvn spring-boot:run
-```
-
-macOS / Linux：
+### 1. 获取代码
 
 ```bash
-cd backend
-mvn spring-boot:run
+git clone <仓库地址> tech-blog-platform
+cd tech-blog-platform
 ```
 
-后端默认地址为 `http://localhost:8080`。启动期间 Flyway 自动执行尚未运行的迁移，JPA 只校验映射（`ddl-auto=validate`），不会删除或重建表。
+### 2. 准备数据库
 
-如需修改连接参数，必须在启动后端的同一个终端设置环境变量。例如：
+**方式 A：本机 MySQL 8（推荐，端口 3306）**
 
-Windows PowerShell：
-
-```powershell
-$env:DB_HOST = "localhost"
-$env:DB_PORT = "3307"
-$env:DB_NAME = "tech_blog"
-$env:DB_USER = "tech_blog"
-$env:DB_PASSWORD = "your_local_password"
-mvn spring-boot:run
-```
-
-macOS / Linux：
-
-```bash
-export DB_HOST=localhost
-export DB_PORT=3307
-export DB_NAME=tech_blog
-export DB_USER=tech_blog
-export DB_PASSWORD=your_local_password
-mvn spring-boot:run
-```
-
-可选变量还有 `SERVER_PORT`（默认 8080）和 `APP_CORS_ALLOWED_ORIGIN`（默认 `http://localhost:5173`）。注意：Docker Compose 会读取根目录 `.env`，但它不会自动把变量导入另一个终端中的 Spring Boot 进程。
-
-### 4. 启动前端
-
-打开新终端：
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-也可以使用 pnpm：
-
-```bash
-cd frontend
-pnpm install
-pnpm dev
-```
-
-浏览器访问 `http://localhost:5173`。开发服务器会把 `/api/*` 代理到 `http://localhost:8080`，浏览器端无需硬编码后端完整地址。
-
-## 使用本机 MySQL 8
-
-如果已安装 MySQL 8，可在有建库和授权权限的账号下执行：
+用有建库权限的账号（通常是 root）执行：
 
 ```sql
 CREATE DATABASE IF NOT EXISTS tech_blog
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_0900_ai_ci;
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 
-CREATE USER IF NOT EXISTS 'tech_blog'@'localhost'
-  IDENTIFIED BY 'tech_blog_dev_password';
-
+CREATE USER IF NOT EXISTS 'tech_blog'@'localhost' IDENTIFIED BY 'tech_blog_dev_password';
+ALTER USER 'tech_blog'@'localhost' IDENTIFIED BY 'tech_blog_dev_password';
 GRANT ALL PRIVILEGES ON tech_blog.* TO 'tech_blog'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-本机 MySQL 通常监听 3306。启动后端前将 `DB_PORT` 设置为 `3306`；若使用其他用户名或密码，也一并设置 `DB_USER`、`DB_PASSWORD`。不要手工执行 `V1__create_core_tables.sql` 后再启动一个全新的 Flyway 环境，否则 Flyway 无法知道该脚本已执行。
+表结构不用手工建，后端启动时由 Flyway 自动创建。
 
-## 数据库初始化与表结构
+**方式 B：Docker Compose（端口 3307，避免与本机 MySQL 冲突）**
 
-数据库结构由 [V1__create_core_tables.sql](backend/src/main/resources/db/migration/V1__create_core_tables.sql) 管理。首次启动后端时，Flyway 创建 `flyway_schema_history` 并按版本执行迁移；后续启动只做校验，不清空数据。
+```bash
+cp .env.example .env
+docker compose up -d mysql
+docker compose ps          # 等到 healthy
+```
 
-### `users`
+数据保存在命名卷 `tech-blog-mysql-data`；`docker compose down -v` 会连同数据一起删除，谨慎使用。
 
-- 主键：`id`（自增 `BIGINT`）。
-- 唯一字段：`username`、`email`。
-- 密码字段：`password_hash`，只允许保存安全哈希，禁止保存明文。
-- 角色：`USER`、`EDITOR`、`ADMIN`。
-- 时间：`created_at`、`updated_at`。
+### 3. 启动后端
 
-### `articles`
-
-- 主键：`id`；`author_id` 外键指向 `users.id`。
-- 内容：`title`、`summary`、`content`（`LONGTEXT`，MVP v0.1 先存纯文本）。
-- 状态：`DRAFT`、`PENDING`、`REJECTED`、`PUBLISHED`。
-- 统计与时间：`view_count`、`created_at`、`updated_at`、`published_at`。
-- 常用索引：作者、状态与创建时间、发布时间、浏览量。
-
-以后修改表结构时，**不要编辑已经共享或执行过的 V1 文件**。请新增如 `V2__add_xxx.sql` 的迁移，避免团队成员数据库出现版本分叉。
-
-## 验证完整调用链路
-
-### 后端接口
-
-数据库和后端启动后：
-
-Windows PowerShell：
+Windows PowerShell（**环境变量只在当前窗口有效，每次都要设**）：
 
 ```powershell
-Invoke-RestMethod http://localhost:8080/api/health
+cd backend
+$env:DB_HOST = "localhost"
+$env:DB_PORT = "3306"            # 用 Docker 的话改成 3307
+$env:DB_NAME = "tech_blog"
+$env:DB_USER = "tech_blog"
+$env:DB_PASSWORD = "tech_blog_dev_password"
+.\mvnw.cmd spring-boot:run
 ```
 
 macOS / Linux：
+
+```bash
+cd backend
+DB_HOST=localhost DB_PORT=3306 DB_NAME=tech_blog \
+DB_USER=tech_blog DB_PASSWORD=tech_blog_dev_password ./mvnw spring-boot:run
+```
+
+看到下面两行说明启动成功（窗口保持运行）：
+
+```text
+Successfully applied 1 migration   (首次启动)
+Tomcat started on port 8080 (http)
+```
+
+### 4. 启动前端（另开一个终端）
+
+```bash
+cd frontend
+npm install            # 若提示 peer 依赖冲突，改用 npm install --legacy-peer-deps
+npm run dev
+```
+
+浏览器访问 `http://localhost:5173`。开发服务器把 `/api/*` 代理到 `http://localhost:8080`，浏览器端不需要硬编码后端地址。
+
+> Windows PowerShell 若报 `npm.ps1 无法加载，因为在此系统上禁止运行脚本`，执行一次
+> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`（不需要管理员），或直接使用 `npm.cmd run dev`。
+
+### 5. 验证
 
 ```bash
 curl -i http://localhost:8080/api/health
+# 数据库正常 → HTTP 200 {"status":"UP","database":"UP"}
+# 数据库不可用 → HTTP 503 {"status":"DOWN","database":"DOWN"}
 ```
 
-数据库正常时：
+首页右侧「系统状态」显示两个「正常」，说明 `浏览器 → Vite 代理 → Spring Boot → MySQL` 全链路打通。
+
+## 接口文档
+
+### 通用约定
+
+- 所有业务接口统一前缀 `/api`。
+- 请求与响应均为 JSON（`Content-Type: application/json`）。
+- 认证基于 **HttpOnly Cookie + 服务端 Session**，浏览器登录后自动携带，前端无需手动加 Token 头。
+- 接口不返回 JPA 实体，统一使用 `dto` 下的对象，任何响应都不包含 `password_hash`。
+- 失败响应统一结构：
 
 ```json
-{"status":"UP","database":"UP"}
+{
+  "code": "VALIDATION_ERROR",
+  "message": "请检查填写内容",
+  "fields": { "username": "用户名需为 3-20 位字母、数字或下划线" }
+}
 ```
 
-HTTP 状态为 200。接口并非固定返回成功，而是通过 `JdbcTemplate` 实际执行 `SELECT 1`。数据库不可用时返回 HTTP 503 和：
+`fields` 仅在字段级校验失败时出现。`code` 取值：
+
+| code | HTTP | 含义 |
+| --- | --- | --- |
+| `VALIDATION_ERROR` | 400 | 请求体字段校验失败（见 `fields`） |
+| `INVALID_BODY` | 400 | 请求体不是合法 JSON |
+| `BAD_REQUEST` | 400 | 业务校验不通过（如两次密码不一致） |
+| `INVALID_CREDENTIALS` | 401 | 账号或密码错误 |
+| `UNAUTHENTICATED` | 401 | 未登录或会话已过期 |
+| `FORBIDDEN` | 403 | 已登录但无权限 |
+| `NOT_FOUND` | 404 | 接口不存在 |
+| `METHOD_NOT_ALLOWED` | 405 | 请求方法不支持 |
+| `CONFLICT` | 409 | 用户名或邮箱已被占用 |
+| `UNSUPPORTED_MEDIA_TYPE` | 415 | Content-Type 不受支持 |
+| `INTERNAL_ERROR` | 500 | 服务端异常（不返回堆栈与 SQL） |
+
+### 健康检查
+
+| 方法 | 路径 | 鉴权 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/api/health` | 公开 | 真实执行 `SELECT 1`，验证数据库连通性 |
+
+### 认证接口
+
+| 方法 | 路径 | 鉴权 | 成功 | 主要失败 |
+| --- | --- | --- | --- | --- |
+| POST | `/api/auth/register` | 公开 | 201 + 用户档案 | 400 参数不合法 / 409 用户名或邮箱已存在 |
+| POST | `/api/auth/login` | 公开 | 200 + 用户档案，响应带 `Set-Cookie: JSESSIONID` | 400 参数不合法 / 401 账号或密码错误 |
+| POST | `/api/auth/logout` | 公开（幂等） | 204，服务端 Session 失效并下发过期 Cookie | — |
+| GET | `/api/auth/me` | 需登录 | 200 + 用户档案 | 401 未登录 |
+
+**用户档案**（任何接口都不返回密码字段）：
 
 ```json
-{"status":"DOWN","database":"DOWN"}
+{ "id": 1, "username": "alice", "email": "alice@example.com", "role": "USER" }
 ```
 
-响应不会包含数据库密码、JDBC URL 或底层异常详情。
-
-### 前端链路
-
-同时启动数据库、后端、前端，打开首页。右侧“系统状态”应显示“完整链路运行正常”。这说明：
-
-```text
-浏览器 → Vite /api 代理 → Spring Boot → MySQL
-```
-
-四个环节均已打通。关闭 MySQL 后点击“重新检查”，状态应变为不可用。
-
-### 自动化检查
+**注册**
 
 ```bash
-# 后端编译与测试
-cd backend
-mvn clean test
-
-# 前端类型检查与生产构建
-cd frontend
-npm run build
+curl -i -X POST http://localhost:8080/api/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"alice","email":"alice@example.com","password":"secret123","confirmPassword":"secret123"}'
 ```
 
-## API 约定
+字段规则：`username` 3-20 位字母/数字/下划线；`email` 合法邮箱（服务端统一转小写存储）；`password` 8-64 个字符且不超过 72 字节（BCrypt 上限）。
 
-- 所有业务接口统一使用 `/api` 前缀。
-- Controller 只处理 HTTP 输入输出，业务逻辑进入 Service，数据访问进入 Repository。
-- 接口不得直接返回 JPA Entity；后续功能使用 `dto` 下的请求/响应对象，避免泄漏密码哈希和懒加载关系。
-- 前端统一从 `src/api/http.ts` 使用 Axios 实例，按领域增加文件（例如 `auth.ts`、`articles.ts`），不要在组件内散落完整后端 URL。
-- Java 包根路径统一为 `com.techblog.platform`；数据库使用 `snake_case`，Java/TypeScript 使用 `camelCase`。
+**登录**（`identifier` 可以是用户名，也可以是邮箱；不区分大小写）
 
-## 五人协作建议
+```bash
+curl -i -c cookie.txt -X POST http://localhost:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"identifier":"alice","password":"secret123"}'
+```
 
-1. 从主分支拉出短生命周期功能分支，例如 `feature/issue-2-auth`，一个分支聚焦一个 Issue。
-2. 提交前至少运行 `mvn test` 和 `npm run build`，不要提交 `target`、`dist`、`node_modules`、`.env` 或 IDE 文件。
-3. 数据库变更只通过新增 Flyway 迁移提交；迁移文件一旦进入共享分支就不要改名或重写。
-4. 业务接口先约定 DTO 与 HTTP 状态码，再分别推进前后端，减少互相等待。
-5. Controller、Service、Repository 保持职责分离；页面、公共组件、API 和类型分别放入现有目录。
-6. 合并请求中说明：关联 Issue、改动范围、数据库迁移、验证命令和页面截图（如有）。
+**查询当前用户 / 退出**
 
-## 后续成员入口
+```bash
+curl -i -b cookie.txt http://localhost:8080/api/auth/me
+curl -i -b cookie.txt -c cookie.txt -X POST http://localhost:8080/api/auth/logout
+curl -i -b cookie.txt http://localhost:8080/api/auth/me     # 退出后应为 401
+```
 
-- 认证成员：从 `backend/.../entity/User.java`、`repository/UserRepository.java` 和 `frontend/src/views/LoginView.vue` 开始，新增认证 DTO/Service/Controller；密码必须使用可靠的单向哈希。
-- 文章查询成员：从 `Article.java`、`ArticleRepository.java`、`ArticlesView.vue`、`ArticleDetailView.vue` 开始，替换 Demo/占位内容。
-- 文章发布成员：从 `WriteView.vue` 开始，新增文章请求 DTO 与文章 Service/Controller。
-- 个人文章成员：从 `MyArticlesView.vue` 和按作者查询的 Repository 方法开始，并在服务端校验数据归属。
-- 公共前端请求：复用 `frontend/src/api/http.ts`；路由统一维护在 `frontend/src/router/index.ts`。
+> 注册成功后接口只返回 201，**不会**自动建立登录态；前端在注册成功后接着调用一次登录接口，实现「注册即登录」的体验。
+
+## 认证与权限设计
+
+### 为什么用 Session 而不是 JWT
+
+- 项目是同域前后端分离（开发经 Vite 代理，生产同域反向代理），Cookie 天然可用；
+- 「退出」必须真实生效。JWT 想让已签发的令牌立即失效，需要额外的 Redis 黑名单，而本项目暂无 Redis；
+- 令牌放 `localStorage` 会被 XSS 直接读取，`HttpOnly` Cookie 拿不到。
+
+代价是水平扩展需要共享会话（可后续替换为 Spring Session + Redis）。
+
+### 安全措施
+
+| 项目 | 实现 |
+| --- | --- |
+| 密码存储 | BCrypt（自带随机盐），只存哈希；拒绝超过 72 字节的密码 |
+| 会话 | `JSESSIONID`，`HttpOnly` + `SameSite=Lax`，2 小时超时 |
+| 会话固定攻击 | 登录成功后更换 SessionId |
+| 越权注册 | 注册时角色固定为 `USER`，不接受前端传入 `role` |
+| 账号枚举 | 登录失败统一提示「用户名或密码错误」 |
+| 并发注册 | 数据库唯一索引兜底，冲突转为 409 而非 500 |
+| 退出 | 服务端 Session 立即失效（旧 Cookie 重放验证为 401） |
+| 错误信息 | 不返回堆栈、SQL、数据库连接信息 |
+| 路由保护 | 前端守卫生效；**真正的权限校验在服务端** |
+
+### 已知边界（后续迭代处理）
+
+1. 未做登录失败次数限制与账号锁定；
+2. CSRF 当前关闭（同源 + SameSite=Lax 下风险可控），跨域部署前必须开启；
+3. Cookie 未加 `Secure`（本地 http 环境），上 https 后应开启；
+4. Session 存于内存，重启后端会导致所有用户重新登录；
+5. 未实现修改密码 / 找回密码 / 邮箱验证。
+
+角色目前分为 `USER` / `EDITOR` / `ADMIN`。`SecurityConfig` 已开启 `@EnableMethodSecurity`，后续文章审核接口可直接用 `@PreAuthorize("hasRole('EDITOR')")` 做方法级鉴权。
+
+## 数据库
+
+结构由 Flyway 版本化迁移管理，脚本位于 `backend/src/main/resources/db/migration/`。首次启动后端时创建 `flyway_schema_history` 并执行未运行的迁移；之后启动只做校验。
+
+### `users`
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | BIGINT | 主键，自增 |
+| `username` | VARCHAR(50) | 唯一 |
+| `email` | VARCHAR(255) | 唯一，小写存储 |
+| `password_hash` | VARCHAR(255) | BCrypt 哈希，禁止明文 |
+| `role` | VARCHAR(20) | `USER` / `EDITOR` / `ADMIN`，默认 `USER` |
+| `created_at` / `updated_at` | DATETIME(6) | 由数据库自动维护 |
+
+### `articles`
+
+`id`、`author_id`（外键 → `users.id`）、`title`、`summary`、`content`（LONGTEXT）、`status`（`DRAFT` / `PENDING` / `REJECTED` / `PUBLISHED`）、`view_count`、`created_at`、`updated_at`、`published_at`。
+
+### 修改表结构的规则
+
+**不要编辑已经执行过的迁移文件**（例如 V1）。需要变更时新增 `V2__add_xxx.sql`，否则团队成员本地会出现 Flyway 校验失败、数据库版本分叉。
+
+## 测试
+
+```bash
+# 后端：单元 + Web 层测试（19 个）
+cd backend
+.\mvnw.cmd test        # macOS / Linux: ./mvnw test
+
+# 前端：类型检查 + 生产构建
+cd frontend
+npm run build          # vue-tsc --noEmit && vite build
+```
+
+后端测试覆盖：健康检查（正常 / 数据库不可用）、注册（哈希入库、邮箱归一化、密码不一致、用户名重复、邮箱重复、超长密码）、登录（委派认证、凭证错误）、接口层（201 / 400 字段错误 / 200 会话建立 / 401 / 204 退出 / me 返回当前用户）。
+
+## 前端说明
+
+### 登录态管理
+
+`src/composables/useAuth.ts` 用模块级 `ref` 维护全局登录态（未引入 Pinia），任何组件调用 `useAuth()` 拿到同一份数据：
+
+```ts
+const { user, isAuthenticated, isEditor, restoreSession, loginWithPassword, registerAccount, logoutUser } = useAuth()
+```
+
+刷新页面时，路由守卫会先调用 `GET /api/auth/me` 恢复登录态，失败则视为未登录。
+
+### 新增受保护页面
+
+在路由上加一行 `meta` 即可，无需改守卫：
+
+```ts
+{
+  path: '/editor',
+  component: () => import('../views/EditorView.vue'),
+  meta: { requiresAuth: true },   // 未登录 → /login?redirect=/editor
+}
+```
+
+角色限制在前端只用于隐藏入口，**服务端必须再校验一次**。
+
+### 请求规范
+
+统一使用 `src/api/http.ts` 的 Axios 实例（自动携带 Cookie、统一错误对象、401 广播），按领域新增文件如 `src/api/articles.ts`，不要在组件里写死后端地址。
+
+## 团队协作规范
+
+1. 从 `main` 拉短生命周期分支，一个分支对应一个 Issue，如 `feature/issue-3-article-list`。
+2. 提交前至少跑通 `.\mvnw.cmd test` 和 `npm run build`。
+3. 不要提交 `target`、`dist`、`node_modules`、`.env` 或 IDE 配置（已在 `.gitignore` 中）。
+4. 数据库变更只通过新增 Flyway 迁移提交，迁移文件进入共享分支后不要改名或重写。
+5. 接口先约定 DTO 与 HTTP 状态码，前后端并行开发。
+6. Controller / Service / Repository 职责分离；页面、组件、API、类型分别放入既有目录。
+7. PR 说明写清：关联 Issue、改动范围、数据库迁移、验证命令、页面截图（如有）。
 
 ## 常见问题
 
-### 3307 端口被占用
+**3306 端口被占用或 MySQL 没启动**
+`Get-Service MySQL80` 查看状态；服务未启动时用管理员 PowerShell 执行 `net start MySQL80`。若改用 Docker，端口映射在 3307，启动后端时 `DB_PORT` 要同步改成 3307。
 
-修改根目录 `.env` 中的 `DB_PORT`，例如改为 `3308`，重新运行 `docker compose up -d mysql`；启动后端的终端也要设置相同的 `DB_PORT`。
+**`mvn` 不是内部或外部命令**
+本项目不需要安装 Maven，直接用 `.\mvnw.cmd`（macOS / Linux 用 `./mvnw`）即可。
 
-### 8080 或 5173 被占用
+**Flyway 校验失败**
+通常表示已执行过的迁移文件被修改。恢复原文件，改为新增下一个版本；不要随意 `repair` 或删除 `flyway_schema_history`。
 
-- 后端：设置 `SERVER_PORT`，同时修改 `frontend/vite.config.ts` 中代理的目标端口。
-- 前端：Vite 已启用 `strictPort`；请先结束占用 5173 的进程，或同步修改 Vite 端口和 `APP_CORS_ALLOWED_ORIGIN`。
+**后端启动报 `Access denied for user 'tech_blog'`**
+数据库账号与密码不一致，或库没建。按「快速开始 → 准备数据库」重新执行一次。
 
-Windows 可用以下命令查找端口占用：
+**8080 / 5173 被占用**
+后端可通过 `SERVER_PORT` 改端口（同时要改 `frontend/vite.config.ts` 的代理目标）；前端端口在 `vite.config.ts`（已开启 `strictPort`）。
 
-```powershell
-Get-NetTCPConnection -LocalPort 3307,8080,5173 -ErrorAction SilentlyContinue
-```
+**前端提示接口 404 或 401**
+先直接访问 `http://localhost:8080/api/health` 判断后端是否存活。注意未登录状态下访问任何 `/api/**` 都会返回 401（鉴权先于路由匹配），接口路径写错时也一样。
 
-macOS / Linux：
-
-```bash
-lsof -i :3307 -i :8080 -i :5173
-```
-
-### 后端提示数据库连接失败
-
-1. 运行 `docker compose ps`，确认 MySQL 状态为 healthy。
-2. 核对 `DB_HOST`、`DB_PORT`、`DB_NAME`、`DB_USER`、`DB_PASSWORD`。
-3. 确认后端使用宿主机映射端口 3307，而不是容器内部端口 3306。
-4. 查看 `docker compose logs mysql`，排除初始化或磁盘问题。
-5. 如果修改过已有数据卷的密码，仅改 `.env` 不会重设旧账号；应使用原密码登录后修改，或在确认没有重要数据后重建数据卷。
-
-### Flyway 校验失败
-
-通常表示已执行的迁移被修改。恢复已共享迁移文件，改为新增下一个版本。不要随意执行 `repair` 或删除 `flyway_schema_history`。
-
-### 前端状态一直显示不可用
-
-先直接访问 `http://localhost:8080/api/health`。若直接访问正常，检查 Vite 是否运行在 5173、`vite.config.ts` 代理是否指向正确的后端端口，然后重启 Vite。
-
-### Maven 或前端依赖下载失败
-
-- 确认 Maven 可访问 Maven Central，Node 包管理器可访问 npm registry。
-- 在校园网络或代理环境下，按本机网络要求配置 Maven `settings.xml` 和 npm/pnpm registry。
-- 不要把个人镜像地址、代理凭据或访问令牌提交到仓库。
+**接口跨域被拦截**
+后端 CORS 白名单来自 `APP_CORS_ALLOWED_ORIGIN`（默认 `http://localhost:5173`）。改前端端口后要同步修改。
 
 ## 安全说明
 
-- `.env.example` 只提供本地开发示例，生产环境不得沿用示例密码。
-- 当前尚未实现认证与授权，除健康检查外不要把此版本直接暴露到公网。
-- `password_hash` 只是安全存储的字段准备；后续认证实现必须在服务端使用成熟密码哈希算法，并进行 DTO 校验与角色校验。
-
+- `.env.example` 只提供本地开发示例，生产环境必须替换数据库密码。
+- 示例账号密码仅用于本地开发，不要提交任何真实凭据。
+- 当前版本已具备基础认证能力，但未做限流、审计与密码找回，**不建议直接暴露到公网**。

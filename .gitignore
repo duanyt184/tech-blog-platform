@@ -7,15 +7,20 @@ frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 frontend/*.local
+# 本项目使用 pnpm-lock.yaml，忽略 npm 生成的锁文件，避免两套锁文件冲突
+frontend/package-lock.json
+*.tsbuildinfo
 
 # Backend
 backend/target/
 backend/.local-m2/
 backend/.mvn/timing.properties
+backend/.mvn/wrapper/maven-wrapper.jar
 
 # IDE and OS
 .idea/
 .vscode/
+.history/
 *.iml
 .DS_Store
 Thumbs.db

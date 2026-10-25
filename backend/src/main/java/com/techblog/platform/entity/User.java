@@ -40,6 +40,19 @@ public class User {
     protected User() {
     }
 
+    /**
+     * 注册时的创建入口：只允许通过工厂方法构造，保证密码字段拿到的是哈希而不是明文。
+     * 角色固定由服务端决定，不接受前端传入，避免越权注册成 EDITOR/ADMIN。
+     */
+    public static User create(String username, String email, String passwordHash) {
+        User user = new User();
+        user.username = username;
+        user.email = email;
+        user.passwordHash = passwordHash;
+        user.role = UserRole.USER;
+        return user;
+    }
+
     public Long getId() {
         return id;
     }

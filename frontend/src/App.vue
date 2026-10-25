@@ -14,7 +14,7 @@ import AppHeader from './components/AppHeader.vue'
           <strong>码上</strong>
           <span>让每一次技术分享都值得被看见</span>
         </div>
-        <span>MVP v0.1 · 基础工程</span>
+        <span>MVP · 注册登录已就绪</span>
       </div>
     </footer>
   </div>
