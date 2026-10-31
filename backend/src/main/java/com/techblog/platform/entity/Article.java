@@ -53,6 +53,20 @@ public class Article {
     protected Article() {
     }
 
+    /**
+     * 发布文章时的创建入口：只允许通过工厂方法构造，
+     * 保证作者、标题、正文、状态等关键字段由服务端统一设置。
+     */
+    public static Article create(User author, String title, String content) {
+        Article article = new Article();
+        article.author = author;
+        article.title = title;
+        article.content = content;
+        article.status = ArticleStatus.PUBLISHED;
+        article.publishedAt = LocalDateTime.now();
+        return article;
+    }
+
     public Long getId() {
         return id;
     }
