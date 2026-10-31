@@ -1,0 +1,64 @@
+.plain-text-body { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; line-height: 1.85; color: var(--tb-body-text, #444); tab-size: 4; }
+.markdown-editor .content-format-control { display: flex; flex-direction: row; align-items: center; gap: 8px; margin: 0; font-weight: 600; }
+.markdown-editor .content-format-control select { width: auto; padding: 6px 10px; font: inherit; }
+.markdown-editor .editor-toolbar { flex-wrap: wrap; gap: 12px; }
+/* Keep reading, review and preview typography consistent on the white theme. */
+.markdown-body { color: var(--tb-body-text, #444); line-height: 1.85; overflow-wrap: anywhere; min-width: 0; }
+.markdown-body > :first-child { margin-top: 0; }
+.markdown-body > :last-child { margin-bottom: 0; }
+.markdown-body :is(h1,h2,h3,h4,h5,h6) { color: var(--tb-text); line-height: 1.4; margin: 1.7em 0 .8em; scroll-margin-top: 24px; font-weight: 650; }
+.markdown-body h1 { font-size: 1.9em; }
+.markdown-body h2 { font-size: 1.5em; padding-bottom: .35em; border-bottom: 1px solid var(--tb-border); }
+.markdown-body h3 { font-size: 1.25em; }
+.markdown-body h4 { font-size: 1.1em; }
+.markdown-body :is(h5,h6) { font-size: 1em; }
+.markdown-body h6 { color: var(--tb-muted); }
+.markdown-body p { font-size: inherit; line-height: inherit; margin: 0 0 1em; }
+.markdown-body a { color: var(--tb-primary, #0088cc); text-decoration: underline; text-underline-offset: 3px; }
+.markdown-body :is(ul,ol) { padding-left: 1.8em; margin: 0 0 1em; }
+.markdown-body li { margin: .3em 0; }
+.markdown-body li > :is(ul,ol) { margin: .35em 0; }
+.markdown-body li > p { margin-bottom: .5em; }
+.markdown-body blockquote { margin: 1em 0; padding: .3em 1em; border-left: 4px solid #c9dce7; color: #596774; background: #f7fafc; }
+.markdown-body blockquote > :last-child { margin-bottom: 0; }
+.markdown-body hr { border: 0; border-top: 1px solid #ddd; margin: 2em 0; }
+.markdown-body code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .9em; }
+.markdown-body :not(pre) > code { padding: .15em .4em; border-radius: 3px; background: #f2f3f4; color: #374151; }
+.markdown-body pre { overflow-x: auto; padding: 16px; margin: 0; background: #f7f8fa; line-height: 1.65; tab-size: 2; }
+.markdown-body pre code.hljs { display: block; padding: 0; background: transparent; }
+.markdown-body .code-block { margin: 1.25em 0; overflow: hidden; }
+.markdown-body .code-caption { color: #637080; background: #f2f4f6; }
+.markdown-body img { max-width: 100%; height: auto; border-radius: 3px; }
+.markdown-body .markdown-table { overflow-x: auto; margin: 1.25em 0; }
+.markdown-body table { border-collapse: collapse; min-width: 50%; font-size: .95em; }
+.markdown-body :is(th,td) { border: 1px solid #dfe3e7; padding: 9px 14px; min-width: 90px; }
+.markdown-body th { background: #f5f7f9; font-weight: 600; }
+.markdown-body tr:nth-child(even) { background: #fafbfc; }
+.markdown-body .task-list-item { list-style: none; }
+.markdown-body input[type="checkbox"] { width: auto; margin: 0 .5em 0 -1.4em; accent-color: #0088cc; vertical-align: middle; }
+.markdown-body details { margin: 1em 0; }
+.markdown-body summary { cursor: pointer; color: #526273; }
+.markdown-body .katex { font-size: 1.1em; overflow-wrap: normal; }
+.markdown-body .katex-display { overflow-x: auto; overflow-y: hidden; padding: .4em 0; margin: 1.2em 0; }
+.markdown-body .katex-error { white-space: pre-wrap; }
+.markdown-editor { margin-top: 8px; }
+.editor-modes { display: flex; gap: 4px; }
+.editor-modes button[aria-pressed="true"] { color: #0077b5; border-color: #98cce3; background: #eef8fd; }
+.markdown-tools { display: flex; flex-wrap: wrap; gap: 3px; padding: 8px; border: 1px solid var(--tb-border-strong); border-bottom: 0; background: #f8f9fa; border-radius: 4px 4px 0 0; }
+.markdown-tools button { border: 0; border-radius: 3px; padding: 5px 9px; color: #4b5965; background: transparent; font: inherit; font-size: 12px; cursor: pointer; }
+.markdown-tools button:hover:not(:disabled) { background: #e8f1f7; color: #0077b5; }
+.markdown-tools button:disabled { opacity: .5; cursor: not-allowed; }
+.markdown-editor-panes { display: grid; min-width: 0; }
+.markdown-editor-panes.is-split { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+.markdown-editor-panes .body-editor { margin: 0; border-radius: 0 0 4px 4px; min-height: 420px; }
+.markdown-editor-panes .editor-preview { padding: 20px; min-width: 0; min-height: 420px; background: #fff; max-height: 75vh; overflow-y: auto; }
+.markdown-editor-panes.is-split .editor-preview { border-left: 0; }
+.markdown-help { margin: 12px 0 20px; color: var(--tb-muted); font-size: 12px; }
+.markdown-help summary { cursor: pointer; }
+.markdown-help p { margin: 8px 0; }
+.markdown-help code { color: #475569; background: #f4f5f6; padding: 2px 4px; border-radius: 3px; }
+@media (max-width: 800px) {
+  .markdown-editor-panes.is-split { grid-template-columns: minmax(0,1fr); }
+  .markdown-editor-panes.is-split .editor-preview { border-left: 1px solid var(--tb-border); border-top: 0; }
+  .markdown-body :is(th,td) { padding: 7px 10px; }
+}

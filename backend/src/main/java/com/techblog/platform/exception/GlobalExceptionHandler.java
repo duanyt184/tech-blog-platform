@@ -66,7 +66,24 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleIntegrityViolation(DataIntegrityViolationException exception) {
         log.warn("Data integrity violation: {}", exception.getMostSpecificCause().getClass().getSimpleName());
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiErrorResponse.of("CONFLICT", "用户名或邮箱已被占用"));
+                .body(ApiErrorResponse.of("CONFLICT", "数据发生冲突，请刷新后重试"));
+    }
+
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleMissingArticle(NotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiErrorResponse.of("NOT_FOUND", exception.getMessage()));
+    }
+
+    @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiErrorResponse> handleConcurrentEdit(Exception exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiErrorResponse.of("CONFLICT", "文章已被更新，请刷新后重试"));
+    }
+
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleParameterType(Exception exception) {
+        return ResponseEntity.badRequest().body(ApiErrorResponse.of("BAD_REQUEST", "请求参数格式不正确"));
     }
 
     /** 登录失败统一提示「用户名或密码错误」，避免被用来枚举系统里有哪些账号。 */

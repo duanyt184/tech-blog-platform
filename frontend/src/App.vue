@@ -1,22 +1,23 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import AppHeader from './components/AppHeader.vue'
+import AppSidebar from './components/AppSidebar.vue'
+const menuOpen = ref(false)
+const route = useRoute()
+watch(() => route.fullPath, () => { menuOpen.value = false })
 </script>
-
 <template>
-  <div class="app-shell">
-    <AppHeader />
-    <main class="app-main">
-      <RouterView />
-    </main>
-    <footer class="site-footer">
-      <div class="page-container footer-content">
-        <div>
-          <strong>码上</strong>
-          <span>让每一次技术分享都值得被看见</span>
-        </div>
-        <span>MVP · 注册登录已就绪</span>
-      </div>
-    </footer>
+  <div class="app-shell" @keydown.esc="menuOpen = false">
+    <a class="skip-link" href="#main-content">跳转到内容</a>
+    <AppHeader :menu-open="menuOpen" @toggle-menu="menuOpen = !menuOpen" />
+    <div class="workspace">
+      <button v-if="menuOpen" type="button" class="sidebar-backdrop" aria-label="关闭导航" @click="menuOpen = false">
+      </button>
+      <AppSidebar :open="menuOpen" @close="menuOpen = false" />
+      <main id="main-content" class="app-main" tabindex="-1">
+        <RouterView />
+      </main>
+    </div>
   </div>
 </template>
-

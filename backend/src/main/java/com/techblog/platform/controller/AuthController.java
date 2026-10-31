@@ -42,6 +42,11 @@ public class AuthController {
         this.authSessionManager = authSessionManager;
     }
 
+    @GetMapping("/csrf")
+    public java.util.Map<String, String> csrf(org.springframework.security.web.csrf.CsrfToken token) {
+        return java.util.Map.of("token", token.getToken(), "headerName", token.getHeaderName());
+    }
+
     @PostMapping("/register")
     public ResponseEntity<AuthUserResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));

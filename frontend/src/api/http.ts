@@ -38,6 +38,15 @@ export const http = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+/** Fetch a fresh session-bound token for each mutation, including login/logout. */
+http.interceptors.request.use(async config => {
+  if (!['get', 'head', 'options'].includes((config.method || 'get').toLowerCase())) {
+    const { data } = await http.get<{ token: string; headerName: string }>('/auth/csrf')
+    config.headers.set(data.headerName, data.token)
+  }
+  return config
+})
+
 /** 登录态失效广播：composable 监听后清空当前用户，路由守卫据此跳转登录页 */
 export const AUTH_UNAUTHORIZED_EVENT = 'auth:unauthorized'
 

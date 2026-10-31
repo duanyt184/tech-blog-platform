@@ -38,9 +38,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  * 「退出即真实失效」，且不用把令牌交给 localStorage（避免 XSS 直接偷凭证）；
  * JWT 想让退出生效还必须额外引入 Redis 黑名单，对 MVP 阶段是负收益。</p>
  *
- * <p><b>CSRF 说明：</b>本项目 Session Cookie 为 HttpOnly + SameSite=Lax，且前端与后端同源访问，
- * 跨站表单提交不会携带 Cookie，MVP 阶段关闭 CSRF 校验。
- * 如果以后改成前后端跨域部署，需要开启 CSRF（CookieCsrfTokenRepository + 前端携带 X-XSRF-TOKEN）。</p>
+ * <p>写请求启用 CSRF；前端通过 /api/auth/csrf 获取令牌并随请求头发送。</p>
  */
 @Configuration
 @EnableWebSecurity
@@ -103,7 +101,7 @@ public class SecurityConfig {
             HttpSecurity http,
             SecurityContextRepository securityContextRepository) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(org.springframework.security.config.Customizer.withDefaults())
                 .cors(cors -> {
                 })
                 .securityContext(context -> context
@@ -117,14 +115,16 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                         .sessionFixation(fixation -> fixation.changeSessionId()))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/health", "/api/auth/csrf",
+                                "/api/articles", "/api/articles/*", "/api/categories").permitAll()
+                        .requestMatchers("/api/editor/**").hasAnyRole("EDITOR", "ADMIN")
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/register",
                                 "/api/auth/login",
                                 // 退出接口做成幂等：未登录时调用也返回 204，前端不必特判
                                 "/api/auth/logout").permitAll()
                         .requestMatchers("/error").permitAll()
-                        // 其余接口（/api/auth/me、后续文章相关接口）必须登录
+                        // 作者工作区与账号收藏必须登录；归属与状态检查由服务层执行
                         .anyRequest().authenticated())
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint((request, response, exception) ->

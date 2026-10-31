@@ -8,6 +8,7 @@ declare module 'vue-router' {
     requiresAuth?: boolean
     /** 只有未登录用户能看的页面（登录页、注册页），已登录会被送回首页 */
     guestOnly?: boolean
+    requiresEditor?: boolean
   }
 }
 
@@ -34,7 +35,7 @@ const router = createRouter({
       component: () => import('../views/ArticleDetailView.vue'),
     },
     {
-      path: '/write',
+      path: '/write/:id?',
       name: 'write',
       component: () => import('../views/WriteView.vue'),
       meta: { requiresAuth: true },
@@ -45,10 +46,13 @@ const router = createRouter({
       component: () => import('../views/MyArticlesView.vue'),
       meta: { requiresAuth: true },
     },
+    { path: '/bookmarks', component: () => import('../views/ArticlesView.vue'), meta: { requiresAuth: true } },
+    { path: '/editor', component: () => import('../views/EditorView.vue'), meta: { requiresAuth: true, requiresEditor: true } },
+    { path: '/editor/:id', component: () => import('../views/ReviewArticleView.vue'), meta: { requiresAuth: true, requiresEditor: true } },
     // 未知路径回首页，避免出现空白页
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
-  scrollBehavior: () => ({ top: 0 }),
+  scrollBehavior: (_to, _from, savedPosition) => savedPosition || { top: 0 },
 })
 
 /**
@@ -68,6 +72,10 @@ router.beforeEach(async (to) => {
 
   if (to.meta.requiresAuth && !user.value) {
     return { path: '/login', query: { redirect: to.fullPath } }
+  }
+
+  if (to.meta.requiresEditor && user.value?.role !== 'EDITOR' && user.value?.role !== 'ADMIN') {
+    return { path: '/my-articles' }
   }
 
   if (to.meta.guestOnly && user.value) {

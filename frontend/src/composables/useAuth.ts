@@ -84,13 +84,9 @@ async function registerAccount(payload: RegisterPayload): Promise<AuthUser> {
 }
 
 async function logoutUser(): Promise<void> {
-  try {
-    await logoutRequest()
-  } finally {
-    // 即使请求失败（例如后端已停止），也要把前端状态清掉，否则界面会卡在「已登录」
-    currentUser.value = null
-    ready.value = true
-  }
+  await logoutRequest()
+  currentUser.value = null
+  ready.value = true
 }
 
 export function useAuth() {
