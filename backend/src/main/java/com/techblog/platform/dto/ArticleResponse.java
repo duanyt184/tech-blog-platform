@@ -10,7 +10,7 @@ import java.util.List;
 public record ArticleResponse(
         Long id, Long authorId, String author, String title, String summary, String content,
         ContentFormat contentFormat,
-        String category, List<String> tags, ArticleStatus status, Long version, Long viewCount,
+        String category, List<String> tags, ArticleStatus status, Long version, Long viewCount, Long bookmarkCount,
         LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime publishedAt,
         Boolean bookmarked, List<ReviewResponse> reviews) {
     public record ReviewResponse(Long id, String actor, String action, String comment,

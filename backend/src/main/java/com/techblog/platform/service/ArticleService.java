@@ -78,11 +78,34 @@ public class ArticleService {
             return cb.and(conditions.toArray(Predicate[]::new));
         };
         String dateField = scope.equals("mine") || scope.equals("editor") ? "updatedAt" : "publishedAt";
-        Sort order = sort.equals("popular") ? Sort.by(Sort.Direction.DESC, "viewCount", "publishedAt", "id")
+        // 热门按收藏数排序：收藏比阅读更能代表「值得读」，阅读数作为并列时的次级依据
+        Sort order = sort.equals("popular") ? Sort.by(Sort.Direction.DESC, "bookmarkCount", "viewCount", "publishedAt", "id")
                 : Sort.by(Sort.Direction.DESC, dateField, "id");
         Page<Article> result = articles.findAll(spec, PageRequest.of(page, size, order));
-        return new PageResponse<>(result.map(article -> response(article, false, false, principal)).getContent(),
+        List<Article> items = result.getContent();
+        Set<Long> bookmarkedIds = Set.of();
+        if (principal != null && !items.isEmpty()) {
+            bookmarkedIds = new HashSet<>(bookmarks.findArticleIds(principal.getId(),
+                    items.stream().map(Article::getId).toList()));
+        }
+        final Set<Long> marked = bookmarkedIds;
+        return new PageResponse<>(items.stream()
+                        .map(article -> response(article, false, false, principal, marked.contains(article.getId())))
+                        .toList(),
                 page, size, result.getTotalElements(), result.getTotalPages());
+    }
+
+    /** 公开侧边栏使用的分类统计：总数 + 每个分类的已发布文章数。 */
+    public CategoryStatsResponse categoryStats() {
+        Map<String, Long> counts = new HashMap<>();
+        for (Object[] row : articles.countPublishedByCategory()) {
+            counts.put((String) row[0], ((Number) row[1]).longValue());
+        }
+        long total = counts.values().stream().mapToLong(Long::longValue).sum();
+        List<CategoryStatsResponse.CategoryCount> categories = CATEGORIES.stream()
+                .map(name -> new CategoryStatsResponse.CategoryCount(name, counts.getOrDefault(name, 0L)))
+                .toList();
+        return new CategoryStatsResponse(total, categories);
     }
 
     @Transactional
@@ -94,7 +117,7 @@ public class ArticleService {
         ArticleResponse data = response(article, true, false, principal);
         return new ArticleResponse(data.id(), data.authorId(), data.author(), data.title(), data.summary(), data.content(),
                 data.contentFormat(),
-                data.category(), data.tags(), data.status(), data.version(), data.viewCount() + 1,
+                data.category(), data.tags(), data.status(), data.version(), data.viewCount() + 1, data.bookmarkCount(),
                 data.createdAt(), data.updatedAt(), data.publishedAt(), data.bookmarked(), null);
     }
 
@@ -188,13 +211,16 @@ public class ArticleService {
         requireUser(principal);
         Article article = find(id);
         if (article.getStatus() != ArticleStatus.PUBLISHED) throw new NotFoundException("文章不存在或尚未发布");
+        // 重复收藏是幂等的；计数按关系表回写，重复点击不会累加
         bookmarks.add(principal.getId(), id);
+        articles.syncBookmarkCount(id);
     }
 
     @Transactional
     public void unbookmark(Long id, UserPrincipal principal) {
         requireUser(principal);
-        bookmarks.deleteByUserIdAndArticleId(principal.getId(), id);
+        bookmarks.remove(principal.getId(), id);
+        articles.syncBookmarkCount(id);
     }
 
     private void apply(Article article, ArticleWriteRequest request) {
@@ -255,15 +281,21 @@ public class ArticleService {
     }
 
     private ArticleResponse response(Article article, boolean content, boolean history, UserPrincipal principal) {
+        Boolean bookmarked = content && principal != null
+                ? bookmarks.existsByUserIdAndArticleId(principal.getId(), article.getId()) : null;
+        return response(article, content, history, principal, bookmarked);
+    }
+
+    private ArticleResponse response(Article article, boolean content, boolean history, UserPrincipal principal,
+            Boolean bookmarked) {
         List<ArticleResponse.ReviewResponse> events = history ? reviews.findByArticleIdOrderByIdDesc(article.getId()).stream()
                 .map(review -> new ArticleResponse.ReviewResponse(review.getId(), review.getActor().getUsername(),
                         review.getAction(), review.getComment(), review.getArticleVersion(), review.getCreatedAt())).toList() : null;
-        Boolean bookmarked = content && principal != null
-                ? bookmarks.existsByUserIdAndArticleId(principal.getId(), article.getId()) : null;
         return new ArticleResponse(article.getId(), article.getAuthor().getId(), article.getAuthor().getUsername(),
                 article.getTitle(), article.getSummary(), content ? article.getContent() : null,
                 article.getContentFormat(),
                 article.getCategory(), article.getTags().stream().sorted().toList(), article.getStatus(), article.getVersion(),
-                article.getViewCount(), article.getCreatedAt(), article.getUpdatedAt(), article.getPublishedAt(), bookmarked, events);
+                article.getViewCount(), article.getBookmarkCount(), article.getCreatedAt(), article.getUpdatedAt(),
+                article.getPublishedAt(), bookmarked, events);
     }
 }

@@ -47,12 +47,20 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     { path: '/bookmarks', component: () => import('../views/ArticlesView.vue'), meta: { requiresAuth: true } },
+    { path: '/comments', component: () => import('../views/CommentsView.vue'), meta: { requiresAuth: true } },
     { path: '/editor', component: () => import('../views/EditorView.vue'), meta: { requiresAuth: true, requiresEditor: true } },
+    { path: '/reports', component: () => import('../views/ReportsView.vue'), meta: { requiresAuth: true, requiresEditor: true } },
     { path: '/editor/:id', component: () => import('../views/ReviewArticleView.vue'), meta: { requiresAuth: true, requiresEditor: true } },
     // 未知路径回首页，避免出现空白页
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
-  scrollBehavior: (_to, _from, savedPosition) => savedPosition || { top: 0 },
+  scrollBehavior: (to, _from, savedPosition) => {
+    // 评论定位：/article/3#comment-12 优先滚动到对应评论
+    if (to.hash) {
+      return { el: to.hash, top: 96, behavior: 'smooth' }
+    }
+    return savedPosition || { top: 0 }
+  },
 })
 
 /**

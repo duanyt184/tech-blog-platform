@@ -42,6 +42,9 @@ public class Article {
     @Column(name = "view_count", nullable = false)
     private Long viewCount = 0L;
 
+    @Column(name = "bookmark_count", nullable = false)
+    private Long bookmarkCount = 0L;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -143,6 +146,14 @@ public class Article {
 
     public void setViewCount(Long viewCount) {
         this.viewCount = viewCount;
+    }
+
+    public Long getBookmarkCount() {
+        return bookmarkCount;
+    }
+
+    public void setBookmarkCount(Long bookmarkCount) {
+        this.bookmarkCount = bookmarkCount;
     }
 
     public LocalDateTime getCreatedAt() {

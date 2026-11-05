@@ -5,6 +5,7 @@ import { getArticle, setBookmark } from '../api/articles'
 import { useAuth } from '../composables/useAuth'
 import AppIcon from '../components/AppIcon.vue'
 import ArticleBody from '../components/ArticleBody.vue'
+import ArticleComments from '../components/ArticleComments.vue'
 import { renderArticleBody } from '../utils/articleBody'
 import { categoryColor, errorMessage, formatCount, formatDate } from '../utils/articles'
 import type { Article } from '../types/article'
@@ -70,6 +71,7 @@ function jumpTo(id: string) {
         <p v-if="actionError" class="error-message" role="alert">{{ actionError }}</p>
         <p v-else class="local-storage-note" aria-live="polite">{{ article.bookmarked ? '已保存到你的账号，可在「我的收藏」中查看。' : '登录后可收藏文章，下次继续阅读。' }}</p>
         <div class="author-card"><span class="avatar avatar-large">{{ article.author.slice(0, 1) }}</span><div><small>本文作者</small><h3>{{ article.author }}</h3></div><AppIcon name="code" :size="30" /></div>
+        <ArticleComments :article-id="article.id" />
       </article>
       <aside class="reading-sidebar"><div class="reading-sidebar-inner"><p class="nav-section-label">本文目录</p><nav v-if="headings.length" aria-label="文章目录"><button v-for="heading in headings" :key="heading.id" :style="{ paddingLeft: `${12 + (heading.depth - 1) * 10}px` }" :class="{ active: activeSection === heading.id }" @click="jumpTo(heading.id)">{{ heading.text }}</button></nav><p v-else class="field-hint">本文没有分节标题</p><div class="reading-sidebar-divider"></div><p class="reading-sidebar-label">值得记录，也值得分享。</p><p class="reading-sidebar-copy">将你的技术实践整理成文章，<br />让更多人从中获得启发。</p><RouterLink to="/write" class="tb-btn"><AppIcon name="edit" :size="16" />开始写作</RouterLink></div></aside>
     </div>

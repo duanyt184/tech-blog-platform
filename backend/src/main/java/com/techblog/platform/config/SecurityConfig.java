@@ -116,7 +116,8 @@ public class SecurityConfig {
                         .sessionFixation(fixation -> fixation.changeSessionId()))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.GET, "/api/health", "/api/auth/csrf",
-                                "/api/articles", "/api/articles/*", "/api/categories").permitAll()
+                                "/api/articles", "/api/articles/*", "/api/articles/*/comments",
+                                "/api/categories", "/api/categories/stats").permitAll()
                         .requestMatchers("/api/editor/**").hasAnyRole("EDITOR", "ADMIN")
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/register",

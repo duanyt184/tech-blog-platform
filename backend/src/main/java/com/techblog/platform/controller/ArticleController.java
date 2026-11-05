@@ -18,6 +18,9 @@ public class ArticleController {
     @GetMapping("/categories")
     public List<String> categories() { return ArticleService.CATEGORIES; }
 
+    @GetMapping("/categories/stats")
+    public CategoryStatsResponse categoryStats() { return service.categoryStats(); }
+
     @GetMapping({"/articles", "/my/articles", "/editor/articles", "/my/bookmarks"})
     public PageResponse<ArticleResponse> list(
             jakarta.servlet.http.HttpServletRequest request,

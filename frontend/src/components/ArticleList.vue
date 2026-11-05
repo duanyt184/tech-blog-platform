@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppIcon from './AppIcon.vue'
 import PagePagination from './PagePagination.vue'
-import { categories, categoryColor, formatCount, formatDate } from '../utils/articles'
+import { categories, categoryColor, errorMessage, formatCount, formatDate } from '../utils/articles'
 import { useArticlePage } from '../composables/useArticlePage'
+import { getCategoryStats, setBookmark } from '../api/articles'
+import { useAuth } from '../composables/useAuth'
+import type { Article } from '../types/article'
 const route = useRoute()
 const router = useRouter()
+const { user } = useAuth()
 const category = computed(() => String(route.query.category || ''))
 const tag = computed(() => String(route.query.tag || ''))
 const query = computed(() => String(route.query.q || '').trim())
@@ -15,10 +19,50 @@ const sort = computed(() => route.query.sort === 'popular' ? 'popular' : 'latest
 const { result, loading, error, reload } = useArticlePage(() => ({
   scope: saved.value ? 'bookmarks' : 'public',
   params: { category: category.value, tag: tag.value, q: query.value, sort: sort.value,
-    page: Number(route.query.page || 0), size: 20 },
+    // 一页 4 篇：不滚动就能看完当前页，更多内容通过翻页浏览
+    page: Number(route.query.page || 0), size: 4 },
 }))
+// 欢迎横幅用「全站已发布文章数」判断：一篇都没发过才展示，发过就永久收起
+const hasPublished = ref(true)
+onMounted(async () => {
+  try {
+    const stats = await getCategoryStats()
+    hasPublished.value = stats.total > 0
+  } catch {
+    // 统计失败时保持隐藏，避免在已有内容的站点上闪出横幅
+  }
+})
+
 const articles = computed(() => result.value.items)
 const heading = computed(() => saved.value ? '我的收藏' : category.value || '文章广场')
+// 快捷收藏：未登录先送去登录页，收藏/取消成功后本地即时更新数字
+const bookmarkBusy = ref(0)
+const actionError = ref('')
+async function toggleBookmark(article: Article) {
+  if (!user.value) {
+    await router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+  if (bookmarkBusy.value) {
+    return
+  }
+  bookmarkBusy.value = article.id
+  actionError.value = ''
+  const next = !article.bookmarked
+  try {
+    await setBookmark(article.id, next)
+    article.bookmarked = next
+    article.bookmarkCount = Math.max(0, (article.bookmarkCount || 0) + (next ? 1 : -1))
+    // 热门排序依赖收藏数，收藏变化后重新拉取当前页，避免顺序停留在旧值
+    if (sort.value === 'popular') {
+      await reload()
+    }
+  } catch (reason) {
+    actionError.value = errorMessage(reason)
+  } finally {
+    bookmarkBusy.value = 0
+  }
+}
 function updateFilter(key: string, value: string) {
   void router.push({ query: { ...route.query, page: undefined, [key]: value || undefined } })
 }
@@ -30,7 +74,7 @@ function changePage(page: number) { void router.push({ query: { ...route.query, 
       <span class="status-dot">
       </span>分享 · 记录 · 一起成长
     </div>
-    <section class="welcome-banner">
+    <section v-if="!hasPublished" class="welcome-banner">
       <div>
         <p class="eyebrow">HELLO, BUILDERS</p>
         <h1>好想法，值得被看见<span>。</span>
@@ -76,13 +120,7 @@ function changePage(page: number) { void router.push({ query: { ...route.query, 
       <RouterLink to="/articles">清除筛选 <AppIcon name="close" :size="13" />
       </RouterLink>
     </div>
-    <div class="article-table-heading">
-      <span>文章 <small>{{ result.totalElements }}</small>
-      </span>
-      <span>作者</span>
-      <span>阅读</span>
-      <span>发布时间</span>
-    </div>
+    <p v-if="actionError" class="error-message" role="alert">{{ actionError }}</p>
     <div v-if="loading" class="empty-state" role="status">正在加载文章…</div>
     <div v-else-if="error" class="empty-state" role="alert"><p>{{ error }}</p><button class="tb-btn" @click="reload">重试</button></div>
     <div v-else-if="articles.length" class="article-list">
@@ -97,17 +135,33 @@ function changePage(page: number) { void router.push({ query: { ...route.query, 
               <span class="category-square" :style="{ background: categoryColor(article.category) }">
               </span>{{ article.category }}</RouterLink>
             <RouterLink v-for="item in article.tags" :key="item" :to="{ path: '/articles', query: { tag: item } }" class="article-tag">{{ item }}</RouterLink>
-            <span class="mobile-author">{{ article.author }}</span>
+          </div>
+          <div class="article-meta">
+            <span class="meta-author">
+              <span class="avatar">{{ article.author.slice(0, 1) }}</span>{{ article.author }}
+            </span>
+            <span class="meta-item" title="阅读数">
+              <AppIcon name="eye" :size="14" />{{ formatCount(article.viewCount) }}
+            </span>
+            <span class="meta-item" title="收藏数">
+              <AppIcon name="star" :size="14" />{{ formatCount(article.bookmarkCount || 0) }}
+            </span>
+            <time class="meta-item" :datetime="article.publishedAt || undefined">{{ formatDate(article.publishedAt) }}</time>
           </div>
         </div>
-        <div class="row-author">
-          <span class="avatar">{{ article.author.slice(0, 1) }}</span>
-          <span>{{ article.author }}</span>
-        </div>
-        <div class="row-views">{{ formatCount(article.viewCount) }}</div>
-        <div class="row-date">
-          <time :datetime="article.publishedAt || undefined">{{ formatDate(article.publishedAt) }}</time>
-        </div>
+        <button
+          type="button"
+          class="bookmark-button"
+          :class="{ 'is-active': article.bookmarked }"
+          :aria-pressed="!!article.bookmarked"
+          :aria-label="article.bookmarked ? '取消收藏' : '收藏文章'"
+          :title="article.bookmarked ? '取消收藏' : '收藏文章'"
+          :disabled="bookmarkBusy === article.id"
+          @click="toggleBookmark(article)"
+        >
+          <AppIcon name="star" :size="15" />
+          {{ bookmarkBusy === article.id ? '保存中…' : article.bookmarked ? '已收藏' : '收藏' }}
+        </button>
       </article>
     </div>
     <div v-else class="empty-state">

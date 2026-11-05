@@ -39,6 +39,16 @@
   margin-bottom: 16px;
 }
 
+/* 校验提示：项目只按需引入了 Element Plus 的 form / input 样式，
+   默认的 .el-form-item__error 样式（红色 12px）并不会被加载，
+   这里显式定义，避免错误提示和普通文字同色同号 */
+.auth-card .el-form-item__error {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--tb-danger, #e45735);
+}
+
 .auth-submit {
   width: 100%;
   margin-top: 8px;

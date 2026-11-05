@@ -1,7 +1,10 @@
 import { http } from './http'
-import type { Article, ArticleScope, ArticleWrite, PageResult } from '../types/article'
+import type { Article, ArticleScope, ArticleWrite, CategoryStats, PageResult } from '../types/article'
 const paths: Record<ArticleScope, string> = {
   public: '/articles', mine: '/my/articles', editor: '/editor/articles', bookmarks: '/my/bookmarks',
+}
+export async function getCategoryStats() {
+  return (await http.get<CategoryStats>('/categories/stats')).data
 }
 export async function listArticles(scope: ArticleScope, params: Record<string, unknown>, signal?: AbortSignal) {
   return (await http.get<PageResult<Article>>(paths[scope], { params, signal })).data

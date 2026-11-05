@@ -21,6 +21,7 @@ export interface Article {
   status: ArticleStatus
   version: number
   viewCount: number
+  bookmarkCount: number
   createdAt: string
   updatedAt: string
   publishedAt: string | null
@@ -35,6 +36,10 @@ export interface ArticleWrite {
   category: string
   tags: string[]
   version?: number
+}
+export interface CategoryStats {
+  total: number
+  categories: { name: string; count: number }[]
 }
 export interface PageResult<T> {
   items: T[]
