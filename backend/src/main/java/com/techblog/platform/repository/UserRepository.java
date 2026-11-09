@@ -4,7 +4,11 @@ import com.techblog.platform.entity.User;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<User> {
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select u from User u where u.role = com.techblog.platform.entity.UserRole.ADMIN and u.enabled = true order by u.id")
+    java.util.List<User> lockAdmins();
 
     Optional<User> findByUsername(String username);
 

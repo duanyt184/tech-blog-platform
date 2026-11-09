@@ -22,7 +22,9 @@ const submitting = ref(false)
 const errorMessage = ref('')
 
 const rules: FormRules = {
-  identifier: [{ required: true, message: '请输入用户名或邮箱', trigger: 'blur' }],
+  identifier: [
+    { required: true, message: '请输入用户名或邮箱', trigger: 'blur' },
+  ],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 }
 
@@ -40,12 +42,19 @@ async function handleSubmit() {
   submitting.value = true
   errorMessage.value = ''
   try {
-    await loginWithPassword({ identifier: form.identifier.trim(), password: form.password })
+    await loginWithPassword({
+      identifier: form.identifier.trim(),
+      password: form.password,
+    })
     // 登录前想去的页面（例如 /write）会带在 redirect 上，登录后送回去
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
+    const redirect =
+      typeof route.query.redirect === 'string' ? route.query.redirect : '/'
     await router.replace(redirect)
   } catch (error) {
-    errorMessage.value = error instanceof ApiError ? error.firstFieldMessage : '登录失败，请稍后重试'
+    errorMessage.value =
+      error instanceof ApiError
+        ? error.firstFieldMessage
+        : '登录失败，请稍后重试'
   } finally {
     submitting.value = false
   }
@@ -56,9 +65,9 @@ async function handleSubmit() {
   <section class="auth-page">
     <div class="auth-card">
       <header class="auth-card__head">
-        <p class="auth-card__eyebrow">码上 · 技术分享社区</p>
+        <p class="auth-card__eyebrow">码上社区</p>
         <h1 class="auth-card__title">欢迎回来</h1>
-        <p class="auth-card__subtitle">登录后可以投稿、管理自己的文章</p>
+        <p class="auth-card__subtitle">登录后可以发帖、管理自己的文章</p>
       </header>
 
       <ElAlert
@@ -109,7 +118,9 @@ async function handleSubmit() {
 
       <p class="auth-card__foot">
         还没有账号？
-        <RouterLink :to="{ path: '/register', query: route.query }">立即注册</RouterLink>
+        <RouterLink :to="{ path: '/register', query: route.query }"
+          >立即注册</RouterLink
+        >
       </p>
     </div>
   </section>

@@ -7,13 +7,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface ArticleCommentRepository extends JpaRepository<ArticleComment, Long> {
+public interface ArticleCommentRepository extends JpaRepository<ArticleComment, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<ArticleComment> {
 
     /** 详情页：某篇已发布文章的评论，按时间倒序。 */
     @Query("select c from ArticleComment c join fetch c.user where c.article.id = :articleId "
             + "and c.deleted = false and c.article.deleted = false "
             + "and c.article.status = com.techblog.platform.entity.ArticleStatus.PUBLISHED "
-            + "order by c.createdAt desc, c.id desc")
+            + "order by c.createdAt asc, c.id asc")
     List<ArticleComment> findForArticle(@Param("articleId") Long articleId, Pageable pageable);
 
     /** 删除评论时需要整棵子树，所以不过滤 deleted。 */

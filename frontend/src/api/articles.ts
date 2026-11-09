@@ -18,6 +18,9 @@ export async function saveArticle(payload: ArticleWrite, id?: number) {
 export async function submitArticle(article: Article) {
   return (await http.post<Article>(`/my/articles/${article.id}/submit`, { version: article.version })).data
 }
+export async function publishTopic(article: Article) {
+  return (await http.post<Article>(`/my/articles/${article.id}/publish`, { version: article.version })).data
+}
 export async function withdrawArticle(article: Article) {
   return (await http.post<Article>(`/my/articles/${article.id}/withdraw`, { version: article.version })).data
 }

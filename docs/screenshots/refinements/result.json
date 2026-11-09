@@ -1,0 +1,25 @@
+{
+  "checks": [
+    "UI registration and authenticated session",
+    "Persistent fixture creation via authenticated API",
+    "Docked composer minimizes and expands without losing text",
+    "Draft saved and survives page reload",
+    "Draft is not publicly readable",
+    "UI direct publication without approval",
+    "Published topic edited directly",
+    "Topic like and bookmark persist",
+    "Reply, reply edit, reply like and quotation",
+    "Interactions survive reload",
+    "User report and automatic moderation enqueue",
+    "All public and personal page routes render",
+    "Dark theme and persisted preference",
+    "Moderator decision persisted",
+    "All six administration modules render",
+    "Mobile routes fit viewport and navigation works",
+    "No browser runtime exceptions"
+  ],
+  "topicId": 76,
+  "authorId": 13,
+  "base": "http://localhost:5174",
+  "screenshots": "../docs/screenshots/refinements"
+}

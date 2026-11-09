@@ -1,0 +1,32 @@
+[
+  {
+    "name": "home",
+    "url": "https://forum.cursor.com/",
+    "title": "Cursor - Community Forum - The official forum to discuss Cursor."
+  },
+  {
+    "name": "categories",
+    "url": "https://forum.cursor.com/categories",
+    "title": "Cursor - Community Forum"
+  },
+  {
+    "name": "latest",
+    "url": "https://forum.cursor.com/latest",
+    "title": "Latest topics - Cursor - Community Forum"
+  },
+  {
+    "name": "tags",
+    "url": "https://forum.cursor.com/tags",
+    "title": "Tags - Cursor - Community Forum"
+  },
+  {
+    "name": "search",
+    "url": "https://forum.cursor.com/search?q=cursor",
+    "title": "Search results for 'cursor' - Cursor - Community Forum"
+  },
+  {
+    "name": "login",
+    "url": "https://forum.cursor.com/login",
+    "title": "Cursor - Community Forum - The official forum to discuss Cursor."
+  }
+]

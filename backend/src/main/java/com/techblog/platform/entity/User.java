@@ -37,6 +37,19 @@ public class User {
     @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "display_name", nullable = false, length = 80)
+    private String displayName = "";
+    @Column(nullable = false, length = 500)
+    private String bio = "";
+    @Column(nullable = false)
+    private boolean enabled = true;
+    public String getDisplayName() { return displayName; }
+    public void setDisplayName(String value) { displayName = value; }
+    public String getBio() { return bio; }
+    public void setBio(String value) { bio = value; }
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean value) { enabled = value; }
+
     protected User() {
     }
 

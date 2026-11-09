@@ -1,191 +1,109 @@
-# 码上 · 技术博客平台
+# 码上社区
 
-支持文章创作、投稿审核、公开阅读与评论互动的前后端分离项目。功能现状与后续建议见 [FEATURES.md](FEATURES.md)。
+基于现有 Vue 3 + TypeScript + Spring Boot + MariaDB/MySQL 项目开发的社区论坛。唯一界面参考为 [Cursor Community Forum](https://forum.cursor.com/)；沿用其暖白／暖黑主题、Cursor Gothic 字体、固定顶栏、侧栏、分类与最新话题双栏、话题表格及讨论流。
 
-## 技术栈
+## 功能与业务边界
 
-| 部分 | 技术 |
-| --- | --- |
-| 前端 | Vue 3、TypeScript 5.9、Vite 8、Vue Router 4、Axios、Element Plus |
-| 正文渲染 | Marked、KaTeX、highlight.js、DOMPurify |
-| 后端 | Java 17 编译目标、Spring Boot 3.5.16、Spring Security、Spring Data JPA、Bean Validation |
-| 数据库 | MySQL / MariaDB；使用 MariaDB JDBC 驱动，Flyway 管理表结构迁移 |
-| 构建与测试 | pnpm 11.25.0、Maven Wrapper 3.9.9、Node.js Test Runner、jsdom、JUnit、Mockito |
-| 本地数据库容器 | Docker Compose，仓库配置提供 MySQL 8.0 |
+- 注册、登录、退出、个人昵称／简介、公开用户主页、活动记录；USER / EDITOR（版主）/ ADMIN 权限。停用和角色修改立即作用于后续请求。
+- Markdown 话题编辑与预览，数据库草稿、直接发布、已发布话题直接编辑、软删除；并发修改校验。
+- 回复、引用、Markdown 回复预览、回复编辑／删除、话题与回复点赞、话题收藏。互动关系保存在数据库，重复点赞／收藏不会累计。
+- 分类与两级子分类、标签和标签分组、最新／热门列表、同分类相关话题。
+- 搜索话题标题／正文／回复／作者／标签；作者、分类、标签、日期及有无回复筛选；公开用户、分类及标签搜索。
+- 普通帖子直接公开；关键词规则和多链接检测将可疑内容送入治理队列，用户也可举报。版主可忽略举报或移除内容，处理结果和说明持久化。
+- 管理用户、帖子、回复、分类、标签及社区规则；管理员可编辑检测短语、开关规则和维护公开社区准则。
+- 手机布局、导航抽屉、浅色／深色／系统主题；主题偏好存于当前浏览器，社区内容和账号数据存于数据库。
 
-源码位于 `frontend/` 和 `backend/`。数据库迁移位于 `backend/src/main/resources/db/migration/`（当前 V1–V7），启动后端时自动执行，无需手工建表。
+不提供独立博客、投稿审批、申请精选、Boards、多人协作编辑或稿件版本管理。旧 `/blog/:id` 地址兼容跳到同一用户主页；旧 `/submit` API 兼容直接发布。数据库 `version` 仅用于防止过期写入，不保存稿件历史快照。
 
-## 功能概览
+自动检测是可配置的短语匹配及多链接规则，并非能识别所有违规的 AI 审核。可疑内容在人工处理前保持公开；不会把所有正常发帖变成投稿审核。热门按收藏数、阅读数和发布时间排序；相关推荐按同分类最新话题选取，统计均来自实际数据。
 
-| 模块 | 当前能力 |
-| --- | --- |
-| 账号 | 注册、登录、退出、刷新后恢复登录态；Session Cookie 认证 |
-| 写作 | 纯文本 / Markdown / LaTeX 正文，编辑、分屏、预览三种视图，草稿与投稿流转 |
-| 审核 | 编辑审核队列，通过或填写意见退回，保留审核记录 |
-| 阅读 | 公开列表**每页 4 篇**，分类 / 标签 / 关键词筛选，最新与热门排序 |
-| 收藏 | 列表行与详情页一键收藏，显示收藏数（超过 1000 显示为 1.2k）；热门按收藏数排序 |
-| 评论 | 详情页评论 + 楼中楼回复（标注「回复 @某人」）；顶层超过 5 条、回复超过 2 条自动折叠，可分页展开；「评论」页可查看收到的评论与我的评论，点击直接跳到对应评论 |
-| 评论治理 | 作者可删除自己的评论（编辑/管理员可删除任意评论，软删除并连带隐藏整棵回复）；读者可举报他人评论；编辑/管理员在「举报处理」页删除评论或忽略举报 |
-| 统计 | 侧边栏「技术分类」显示已发布总数与各分类文章数，路由切换或每 60 秒刷新 |
-| 适配 | 宽屏通栏、侧边栏贴左；窄屏（≤760px）改为抽屉式导航 |
+## 本地启动
 
-## 角色与权限
-
-角色保存在 `users.role`，注册账号默认为 `USER`。
-
-| 角色 | 能力 |
-| --- | --- |
-| USER | 注册登录、写文章投稿、收藏、评论与回复、举报他人评论、删除自己的评论 |
-| EDITOR | USER 的全部能力 + 审核投稿 + 删除任意评论 + 处理举报 |
-| ADMIN | EDITOR 的全部能力，保留给系统管理使用 |
-
-升级角色见「启动步骤 5」。评论治理入口「举报处理」位于侧边栏「创作空间」，仅 EDITOR / ADMIN 可见。
-
-## 启动步骤
-
-### 0. 一键启动（本机 MySQL，推荐）
-
-根目录的 `dev.ps1` 会读取 `.env`、检查数据库端口、必要时构建后端，然后分别启动前后端并等待就绪：
-
-```powershell
-Copy-Item .env.example .env
-# 编辑 .env，填入本机 MySQL 的连接信息（本机服务通常为 3306 端口）
-.\dev.ps1          # 启动后端 8080 与前端 5173
-.\dev.ps1 -Stop    # 停止（按 .local/dev.pids 记录结束整棵进程树）
-```
-
-说明：
-
-- 若数据库用 Compose 启动，把 `.env` 里的 `DB_PORT` 改成 `3307` 即可继续使用同一脚本。
-- `dev.ps1` 是 PowerShell 5.1 也能运行的脚本，**必须保存为 UTF-8 with BOM**，否则中文注释会被按 GBK 解析而报语法错误。
-- 脚本会先探测 `DB_HOST:DB_PORT`，数据库没起来时会提示；然后依次启动后端与前端，并轮询 `/api/health` 与首页。
-
-### 1. 准备环境
-
-- JDK 17 或更高版本，并正确设置 `JAVA_HOME`。
-- Node.js 22.13 或更高版本。虽然前端声明最低 20.19，项目使用的 pnpm 11.25 要求至少 22.13。
-- Docker 与 Docker Compose；使用已有数据库时可以不安装。
-
-安装项目指定的包管理器：
+需要 JDK 17+、Node.js 22.13+、pnpm 11.25.0、Maven（或仓库 Wrapper）和 MySQL 8 / MariaDB。已有 `.env` 请勿覆盖。
 
 ```bash
-npm install -g pnpm@11.25.0
-```
-
-没有全局 pnpm 时，可以用 Node 自带的 corepack：`corepack prepare pnpm@11.25.0 --activate`，并把下面命令中的 `pnpm` 换成 `corepack pnpm`。
-
-以下命令均从项目根目录开始。首次运行需要联网下载依赖；Maven Wrapper 会自动下载 Maven，无需另行安装。
-
-### 2. 启动数据库
-
-复制根目录的环境配置：
-
-```bash
-# macOS / Linux
-cp .env.example .env
-```
-
-Windows PowerShell 使用 `Copy-Item .env.example .env`。已有 `.env` 时直接检查配置，不必覆盖。然后运行：
-
-```bash
+cp .env.example .env  # 仅首次配置
+# 修改 .env 中数据库连接、账号及密码
+# 可选：使用项目的 MySQL 容器
 docker compose up -d mysql
-docker compose ps
+
+cd frontend
+pnpm install --frozen-lockfile
+cd ..
+./dev.sh
 ```
 
-等待 `mysql` 状态变为 `healthy`。示例配置使用数据库 `tech_blog`、账号 `tech_blog`、密码 `tech_blog_dev_password`，宿主机端口为 **3307**。可在 `.env` 中修改；已有数据库卷的账号密码不会因为修改 `.env` 而自动改变。
+默认访问 **http://localhost:5173**，健康检查 **http://localhost:8080/api/health**。脚本读取 `.env`，构建后端、等待数据库、启动 Vite。按 Ctrl+C 停止本脚本启动的服务；日志在 `.local/`。
 
-如果使用本机 MySQL / MariaDB（如 `dev.ps1` 的默认方式），请先创建 `tech_blog` 数据库和有该库建表权限的账号，并在 `.env` 中填写实际连接信息（本机端口通常为 3306）。
-
-### 3. 启动后端
-
-使用 `dev.ps1` 时会自动完成这一步；手动启动时另开一个终端。下面的配置与 Compose 示例一致（3307），使用本机数据库时把 `DB_PORT` 改为 3306。
-
-macOS / Linux：
+手动运行后端：
 
 ```bash
+set -a
+source .env
+set +a
 cd backend
-DB_HOST=localhost DB_PORT=3307 DB_NAME=tech_blog \
-DB_USER=tech_blog DB_PASSWORD=tech_blog_dev_password \
-sh mvnw spring-boot:run
+mvn spring-boot:run
+# 没有系统 Maven 时使用 sh mvnw spring-boot:run
 ```
 
-Windows PowerShell：
-
-```powershell
-cd backend
-$env:DB_HOST = "localhost"
-$env:DB_PORT = "3307"
-$env:DB_NAME = "tech_blog"
-$env:DB_USER = "tech_blog"
-$env:DB_PASSWORD = "tech_blog_dev_password"
-.\mvnw.cmd spring-boot:run
-```
-
-后端默认运行于 `http://localhost:8080`。根目录 `.env` 供 Compose 与 `dev.ps1` 使用，Spring Boot 不会自动读取它，因此手动启动时需要像上面一样设置环境变量。Flyway 自动执行尚未执行的迁移；不要修改已执行的迁移文件。
-
-打开 `http://localhost:8080/api/health`，数据库正常时返回 HTTP 200 和 `{"status":"UP","database":"UP"}`；连接失败时返回 503。
-
-### 4. 启动前端
-
-另开一个终端：
+另一终端：
 
 ```bash
 cd frontend
-pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-访问 **http://localhost:5173**。开发服务器将 `/api` 请求代理到 `http://localhost:8080`。如修改后端端口，需要同步修改 `frontend/vite.config.ts` 中的代理目标；如修改前端来源，需要同步设置后端的 `APP_CORS_ALLOWED_ORIGIN`。
+Vite 将 `/api` 代理到后端，默认 `http://localhost:8080`。更换端口时设置 `API_PROXY_TARGET`；前端实际访问域名和端口须与 `APP_CORS_ALLOWED_ORIGIN` 一致，例如 `localhost` 与 `127.0.0.1` 是不同 Origin。
 
-### 5. 注册与发布第一篇文章
+## 数据迁移和管理员
 
-1. 在网页注册作者账号，进入「写文章」，保存正文并投稿。
-2. 再注册一个独立的编辑账号。
-3. 由数据库管理员连接 `tech_blog`，为该编辑账号执行下列 SQL，用户名必须替换为实际值：
+Flyway 自动运行 V1–V14。旧账号、文章、评论和分类保留：V9 将旧待投稿／退回文章转为私人草稿，将旧公开内容纳入论坛；V11 将旧举报（含处理历史）迁入新队列。V12 支持标签分组；V13 更新为 13 个数学与计算机学科分类，并提供 10 个相关标签。已有帖子重归类，正在使用的历史标签保留；V14 为 13 个学科设置独立分类颜色。发布前备份已有数据库，不要修改已应用的迁移文件。
+
+新库只创建分类和社区规则，没有默认管理员密码，也没有生产演示帖子。先注册账号，再由数据库管理员初始化首位管理员：
 
 ```sql
-UPDATE users SET role = 'EDITOR' WHERE username = '实际编辑用户名';
--- 需要管理员（ADMIN）时改成 'ADMIN'
+UPDATE users SET role = 'ADMIN' WHERE username = '你的管理员用户名';
 ```
 
-使用 Compose 时可运行 `docker compose exec mysql mysql -u root -p tech_blog`，输入 `.env` 中的 `DB_ROOT_PASSWORD` 后执行 SQL。
+刷新页面后进入 `/admin`，此后可在管理后台调整其他账号。注册接口只能创建普通用户，无法通过提交角色字段提权。管理员不能停用自己或降级自己，也不能移除最后一位有效管理员。
 
-编辑账号退出后重新登录，进入「审核工作台」通过投稿，文章才会出现在公开列表中。新数据库没有演示文章；编辑不能审核自己的投稿。测试两个账号时，请使用不同浏览器或独立隐私会话。
+## 页面
 
-## 项目结构
+| 页面 | 地址 |
+| --- | --- |
+| 首页 / 分类 | `/`、`/categories` |
+| 最新 / 热门话题 | `/latest`、`/top` |
+| 分类／标签过滤 | `/articles?category=软件工程`、`/articles?tag=testing` |
+| 话题 / 编辑器 | `/t/:id`、`/write/:id?` |
+| 搜索 / 标签 | `/search`、`/tags` |
+| 个人发帖 / 草稿 / 收藏 | `/my-articles`、`/drafts`、`/bookmarks` |
+| 用户主页 / 活动 | `/u/:id`、`/u/:id?tab=activity` |
+| 个人资料 / 回复 | `/settings`、`/comments` |
+| 内容治理 / 管理后台 | `/review`、`/admin` |
+| 社区准则 | `/guidelines` |
 
-```text
-tech-blog-platform-main/
-├─ backend/                          Spring Boot 服务
-│  ├─ src/main/java/com/techblog/platform/
-│  │  ├─ controller/                 REST 接口
-│  │  ├─ service/                    业务规则（投稿流转、评论、举报）
-│  │  ├─ repository/                 Spring Data JPA
-│  │  ├─ entity/                     JPA 实体
-│  │  ├─ dto/                        请求 / 响应结构
-│  │  └─ security/                   会话认证与 CSRF
-│  └─ src/main/resources/db/migration/   Flyway 迁移 V1–V7
-├─ frontend/                         Vue 3 + Vite 前端
-│  ├─ src/views/                     页面级组件
-│  ├─ src/components/                文章列表、评论、编辑器等
-│  ├─ src/api/                       Axios 封装与接口
-│  └─ src/styles/                    全局与页面样式
-├─ dev.ps1                           一键启动 / 停止（Windows）
-├─ docker-compose.yml                MySQL 8.0（可选）
-└─ .env.example                      本地配置模板
-```
-
-## 常用检查命令
-
-在 `frontend/` 下运行：
+## 验证
 
 ```bash
-pnpm test     # 正文渲染与编辑器组件的 Node 测试（依赖 @vue/compiler-sfc 与 jsdom）
-pnpm build    # 类型检查 + 生产构建
+cd frontend
+pnpm test
+pnpm build
+cd ../backend
+mvn test
 ```
 
-构建结果位于 `frontend/dist/`。部署时还需要配置 `/api` 反向代理和前端路由回退；开发服务器配置不会随静态文件部署。
+常规后端测试会跳过数据库集成测试。完整数据库测试和真实浏览器测试的环境要求、命令及截图见 [docs/TESTING.md](docs/TESTING.md)。测试账号与示例话题只由测试脚本写入指定的隔离测试实例，不在生产启动时自动生成。
 
-在 `backend/` 下运行 `sh mvnw test`，Windows 使用 `.\mvnw.cmd test`。默认跳过依赖真实数据库的文章集成测试；如需运行，先准备独立测试数据库，再设置 `ARTICLE_DB_TEST=true`、`ARTICLE_TEST_DB_URL`（`jdbc:mariadb://主机:端口/测试库`）、`ARTICLE_TEST_DB_USER` 和 `ARTICLE_TEST_DB_PASSWORD`。测试会执行迁移，应使用测试库。
+界面对比记录见 [docs/VISUAL_REVIEW.md](docs/VISUAL_REVIEW.md)。原站帖子、用户头像和当前数据会变化，本项目不复制用户账号或伪造原站统计。原站登录采用其自身账户体系；本项目使用独立账号与 Session。因此不能将截图相似等同于像素差异为零或原站全部服务能力完全一致。
 
-本地开发完成后停止前后端终端进程，运行 `docker compose stop mysql` 停止数据库并保留数据；用 `dev.ps1` 启动时直接运行 `.\dev.ps1 -Stop` 即可。
+## 部署
+
+```bash
+cd frontend
+pnpm build
+cd ../backend
+mvn -DskipTests package
+java -jar target/tech-blog-backend-0.1.0-SNAPSHOT.jar
+```
+
+生产将 `frontend/dist/` 放入静态服务器，配置 Vue 路由回退到 `index.html`，同域代理 `/api` 到后端。使用真实数据库配置、HTTPS，并设置 `SERVER_SERVLET_SESSION_COOKIE_SECURE=true`。当前 Session 适用于单实例，服务重启需要重新登录，帖子和互动数据不受影响。多实例部署须共享会话或采用粘性会话。备份、邮件服务、对象存储、外部 SSO 不包含在此本地实现中。

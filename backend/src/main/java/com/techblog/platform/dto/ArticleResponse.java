@@ -12,7 +12,7 @@ public record ArticleResponse(
         ContentFormat contentFormat,
         String category, List<String> tags, ArticleStatus status, Long version, Long viewCount, Long bookmarkCount,
         LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime publishedAt,
-        Boolean bookmarked, List<ReviewResponse> reviews) {
+        Boolean bookmarked, List<ReviewResponse> reviews, boolean community, long replyCount, long likeCount) {
     public record ReviewResponse(Long id, String actor, String action, String comment,
                                  Long articleVersion, LocalDateTime createdAt) { }
 }

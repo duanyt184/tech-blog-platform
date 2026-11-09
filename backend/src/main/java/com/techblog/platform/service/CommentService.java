@@ -40,13 +40,23 @@ public class CommentService {
     private static final int MY_LIST_LIMIT = 100;
     private static final int REPORT_LIMIT = 200;
 
+    private final ForumService forum;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final ArticleCommentRepository comments;
     private final ArticleRepository articles;
     private final UserRepository users;
     private final CommentReportRepository reports;
 
-    public CommentService(ArticleCommentRepository comments, ArticleRepository articles,
-                          UserRepository users, CommentReportRepository reports) {
+    public CommentService(
+        ArticleCommentRepository comments,
+        ArticleRepository articles,
+        UserRepository users,
+        CommentReportRepository reports,
+        ForumService forum,
+        org.springframework.jdbc.core.JdbcTemplate jdbc
+    ) {
+        this.forum = forum;
+        this.jdbc = jdbc;
         this.comments = comments;
         this.articles = articles;
         this.users = users;
@@ -54,43 +64,108 @@ public class CommentService {
     }
 
     public List<CommentResponse> list(Long articleId) {
+        return list(articleId, 0, 50);
+    }
+
+    public List<CommentResponse> list(Long articleId, int page, int size) {
+        if (
+            page < 0 || page > 10000 || size < 1 || size > 100
+        ) throw new BadRequestException("分页无效");
         Article article = publishedArticle(articleId);
-        return comments.findForArticle(article.getId(), PageRequest.of(0, DETAIL_LIMIT)).stream()
-                .map(comment -> response(comment, false))
-                .toList();
+        return comments
+            .findForArticle(article.getId(), PageRequest.of(page, size))
+            .stream()
+            .map(comment -> response(comment, false))
+            .toList();
     }
 
     @Transactional
-    public CommentResponse add(Long articleId, CommentRequest request, UserPrincipal principal) {
+    public CommentResponse add(
+        Long articleId,
+        CommentRequest request,
+        UserPrincipal principal
+    ) {
         requireUser(principal);
-        String content = request.content() == null ? "" : request.content().trim();
+        String content =
+            request.content() == null ? "" : request.content().trim();
         if (content.isEmpty()) {
             throw new BadRequestException("评论内容不能为空");
         }
         Article article = publishedArticle(articleId);
         ArticleComment parent = null;
         if (request.parentId() != null) {
-            parent = comments.findById(request.parentId())
-                    .filter(c -> !c.isDeleted())
-                    .orElseThrow(() -> new BadRequestException("要回复的评论不存在"));
+            parent = comments
+                .findById(request.parentId())
+                .filter(c -> !c.isDeleted())
+                .orElseThrow(() ->
+                    new BadRequestException("要回复的评论不存在")
+                );
             if (!parent.getArticle().getId().equals(article.getId())) {
                 throw new BadRequestException("要回复的评论不属于这篇文章");
             }
         }
-        ArticleComment saved = comments.saveAndFlush(new ArticleComment(
-                article, users.getReferenceById(principal.getId()), content, parent));
-        return new CommentResponse(saved.getId(), article.getId(), principal.getId(), null,
-                principal.getUsername(), saved.getContent(), saved.getCreatedAt(),
-                parent == null ? null : parent.getId());
+        ArticleComment saved = comments.saveAndFlush(
+            new ArticleComment(
+                article,
+                users.getReferenceById(principal.getId()),
+                content,
+                parent
+            )
+        );
+        forum.detect(articleId, saved.getId(), content);
+        jdbc.update(
+            "UPDATE articles SET updated_at=NOW(6) WHERE id=?",
+            articleId
+        );
+        return new CommentResponse(
+            saved.getId(),
+            article.getId(),
+            principal.getId(),
+            null,
+            principal.getUsername(),
+            saved.getContent(),
+            saved.getCreatedAt(),
+            parent == null ? null : parent.getId()
+        );
+    }
+
+    @Transactional
+    public CommentResponse edit(
+        Long id,
+        CommentRequest request,
+        UserPrincipal principal
+    ) {
+        requireUser(principal);
+        var c = comments
+            .findById(id)
+            .filter(v -> !v.isDeleted())
+            .orElseThrow(() -> new NotFoundException("回复不存在"));
+        publishedArticle(c.getArticle().getId());
+        if (
+            !c.getUser().getId().equals(principal.getId())
+        ) throw new AccessDeniedException("只能编辑自己的回复");
+        if (request.content().isBlank()) throw new BadRequestException(
+            "回复不能为空"
+        );
+        c.setContent(request.content().trim());
+        comments.flush();
+        forum.detect(c.getArticle().getId(), c.getId(), c.getContent());
+        return response(c, false);
     }
 
     public MyCommentsResponse mine(UserPrincipal principal) {
         requireUser(principal);
         PageRequest limit = PageRequest.of(0, MY_LIST_LIMIT);
-        List<CommentResponse> written = comments.findWritten(principal.getId(), limit).stream()
-                .map(comment -> response(comment, true)).toList();
-        List<CommentResponse> received = comments.findReceived(principal.getId(), limit).stream()
-                .map(comment -> response(comment, true)).toList();
+        List<CommentResponse> written = comments
+            .findWritten(principal.getId(), limit)
+            .stream()
+            .map(comment -> response(comment, true))
+            .toList();
+        List<CommentResponse> received = comments
+            .findReceived(principal.getId(), limit)
+            .stream()
+            .map(comment -> response(comment, true))
+            .toList();
         return new MyCommentsResponse(written, received);
     }
 
@@ -98,17 +173,25 @@ public class CommentService {
     @Transactional
     public void delete(Long commentId, UserPrincipal principal) {
         requireUser(principal);
-        ArticleComment comment = comments.findById(commentId)
-                .filter(item -> !item.isDeleted())
-                .orElseThrow(() -> new NotFoundException("评论不存在"));
-        boolean moderator = principal.getRole() == UserRole.EDITOR || principal.getRole() == UserRole.ADMIN;
-        if (!moderator && !comment.getUser().getId().equals(principal.getId())) {
+        ArticleComment comment = comments
+            .findById(commentId)
+            .filter(item -> !item.isDeleted())
+            .orElseThrow(() -> new NotFoundException("评论不存在"));
+        boolean moderator =
+            principal.getRole() == UserRole.EDITOR ||
+            principal.getRole() == UserRole.ADMIN;
+        if (
+            !moderator && !comment.getUser().getId().equals(principal.getId())
+        ) {
             throw new AccessDeniedException("只能删除自己的评论");
         }
         softDeleteTree(comment);
         // 评论已被作者删除时，它的待处理举报一并归档，避免举报队列里留下已消失的内容
         var handler = users.getReferenceById(principal.getId());
-        for (CommentReport report : reports.findByCommentIdAndStatus(commentId, ReportStatus.PENDING)) {
+        for (CommentReport report : reports.findByCommentIdAndStatus(
+            commentId,
+            ReportStatus.PENDING
+        )) {
             report.resolve(ReportStatus.DELETED, handler);
         }
     }
@@ -116,38 +199,31 @@ public class CommentService {
     @Transactional
     public void report(Long commentId, String reason, UserPrincipal principal) {
         requireUser(principal);
-        String text = reason == null ? "" : reason.trim();
-        if (text.isEmpty()) {
-            throw new BadRequestException("请选择举报原因");
-        }
-        if (text.length() > 200) {
-            throw new BadRequestException("举报原因过长");
-        }
-        ArticleComment comment = comments.findById(commentId)
-                .filter(item -> !item.isDeleted())
-                .orElseThrow(() -> new NotFoundException("评论不存在"));
-        if (comment.getUser().getId().equals(principal.getId())) {
-            throw new BadRequestException("不能举报自己的评论");
-        }
-        if (reports.existsByCommentIdAndReporterIdAndStatus(commentId, principal.getId(), ReportStatus.PENDING)) {
-            throw new ConflictException("你已经举报过这条评论，等待处理即可");
-        }
-        reports.saveAndFlush(new CommentReport(
-                comment, users.getReferenceById(principal.getId()), text));
+        var c = comments
+            .findById(commentId)
+            .orElseThrow(() -> new NotFoundException("回复不存在"));
+        forum.report(c.getArticle().getId(), commentId, reason, principal);
     }
 
     public List<CommentReportResponse> pendingReports(UserPrincipal principal) {
         requireEditor(principal);
-        return reports.findByStatus(ReportStatus.PENDING, PageRequest.of(0, REPORT_LIMIT)).stream()
-                .map(this::reportResponse)
-                .toList();
+        return reports
+            .findByStatus(ReportStatus.PENDING, PageRequest.of(0, REPORT_LIMIT))
+            .stream()
+            .map(this::reportResponse)
+            .toList();
     }
 
     @Transactional
-    public void resolveReport(Long reportId, String action, UserPrincipal principal) {
+    public void resolveReport(
+        Long reportId,
+        String action,
+        UserPrincipal principal
+    ) {
         requireEditor(principal);
-        CommentReport report = reports.findById(reportId)
-                .orElseThrow(() -> new NotFoundException("举报不存在"));
+        CommentReport report = reports
+            .findById(reportId)
+            .orElseThrow(() -> new NotFoundException("举报不存在"));
         if (report.getStatus() != ReportStatus.PENDING) {
             throw new ConflictException("该举报已处理");
         }
@@ -155,7 +231,9 @@ public class CommentService {
         if ("DELETE".equalsIgnoreCase(action)) {
             softDeleteTree(report.getComment());
             for (CommentReport other : reports.findByCommentIdAndStatus(
-                    report.getComment().getId(), ReportStatus.PENDING)) {
+                report.getComment().getId(),
+                ReportStatus.PENDING
+            )) {
                 other.resolve(ReportStatus.DELETED, handler);
             }
         } else if ("DISMISS".equalsIgnoreCase(action)) {
@@ -166,11 +244,17 @@ public class CommentService {
     }
 
     private void softDeleteTree(ArticleComment root) {
-        List<ArticleComment> all = comments.findAllByArticleId(root.getArticle().getId());
+        List<ArticleComment> all = comments.findAllByArticleId(
+            root.getArticle().getId()
+        );
         Map<Long, List<ArticleComment>> children = new HashMap<>();
         for (ArticleComment item : all) {
             if (item.getParent() != null) {
-                children.computeIfAbsent(item.getParent().getId(), key -> new ArrayList<>()).add(item);
+                children
+                    .computeIfAbsent(item.getParent().getId(), key ->
+                        new ArrayList<>()
+                    )
+                    .add(item);
             }
         }
         Deque<ArticleComment> queue = new ArrayDeque<>();
@@ -188,27 +272,44 @@ public class CommentService {
 
     private CommentReportResponse reportResponse(CommentReport report) {
         ArticleComment comment = report.getComment();
-        return new CommentReportResponse(report.getId(), comment.getId(), comment.getArticle().getId(),
-                comment.getArticle().getTitle(), comment.getUser().getUsername(), comment.getContent(),
-                report.getReporter().getUsername(), report.getReason(), report.getStatus(),
-                report.getCreatedAt());
+        return new CommentReportResponse(
+            report.getId(),
+            comment.getId(),
+            comment.getArticle().getId(),
+            comment.getArticle().getTitle(),
+            comment.getUser().getUsername(),
+            comment.getContent(),
+            report.getReporter().getUsername(),
+            report.getReason(),
+            report.getStatus(),
+            report.getCreatedAt()
+        );
     }
 
     private Article publishedArticle(Long articleId) {
-        Article article = articles.findByIdAndDeletedFalse(articleId)
-                .orElseThrow(() -> new NotFoundException("文章不存在"));
+        Article article = articles
+            .findByIdAndDeletedFalse(articleId)
+            .orElseThrow(() -> new NotFoundException("文章不存在"));
         if (article.getStatus() != ArticleStatus.PUBLISHED) {
             throw new NotFoundException("文章不存在或尚未发布");
         }
         return article;
     }
 
-    private CommentResponse response(ArticleComment comment, boolean withArticle) {
-        return new CommentResponse(comment.getId(), comment.getArticle().getId(),
-                comment.getUser().getId(),
-                withArticle ? comment.getArticle().getTitle() : null,
-                comment.getUser().getUsername(), comment.getContent(), comment.getCreatedAt(),
-                comment.getParent() == null ? null : comment.getParent().getId());
+    private CommentResponse response(
+        ArticleComment comment,
+        boolean withArticle
+    ) {
+        return new CommentResponse(
+            comment.getId(),
+            comment.getArticle().getId(),
+            comment.getUser().getId(),
+            withArticle ? comment.getArticle().getTitle() : null,
+            comment.getUser().getUsername(),
+            comment.getContent(),
+            comment.getCreatedAt(),
+            comment.getParent() == null ? null : comment.getParent().getId()
+        );
     }
 
     private void requireUser(UserPrincipal principal) {
@@ -219,7 +320,10 @@ public class CommentService {
 
     private void requireEditor(UserPrincipal principal) {
         requireUser(principal);
-        if (principal.getRole() != UserRole.EDITOR && principal.getRole() != UserRole.ADMIN) {
+        if (
+            principal.getRole() != UserRole.EDITOR &&
+            principal.getRole() != UserRole.ADMIN
+        ) {
             throw new AccessDeniedException("没有处理举报的权限");
         }
     }

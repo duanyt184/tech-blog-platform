@@ -57,6 +57,11 @@ public class Article {
     @Column(nullable = false, length = 40)
     private String category = "学习笔记";
 
+    @Column(nullable = false)
+    private boolean community = false;
+    public boolean isCommunity() { return community; }
+    public void setCommunity(boolean value) { community = value; }
+
     @Version
     @Column(nullable = false)
     private Long version;

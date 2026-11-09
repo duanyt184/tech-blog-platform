@@ -29,6 +29,7 @@ public class AppUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
         String value = identifier == null ? "" : identifier.trim();
         return userRepository.findByUsernameOrEmail(value, value)
+                .filter(com.techblog.platform.entity.User::isEnabled)
                 .map(UserPrincipal::from)
                 .orElseThrow(() -> new UsernameNotFoundException("用户不存在"));
     }

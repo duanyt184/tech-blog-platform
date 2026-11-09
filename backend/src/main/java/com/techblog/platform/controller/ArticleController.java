@@ -16,7 +16,7 @@ public class ArticleController {
     public ArticleController(ArticleService service) { this.service = service; }
 
     @GetMapping("/categories")
-    public List<String> categories() { return ArticleService.CATEGORIES; }
+    public List<String> categories() { return service.categoryNames(); }
 
     @GetMapping("/categories/stats")
     public CategoryStatsResponse categoryStats() { return service.categoryStats(); }
@@ -31,14 +31,18 @@ public class ArticleController {
             @RequestParam(defaultValue = "") String status,
             @RequestParam(defaultValue = "latest") String sort,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue="") String author,
+            @RequestParam(defaultValue="") String after,
+            @RequestParam(defaultValue="") String before,
+            @RequestParam(defaultValue="all") String replies) {
         String scope = switch (request.getRequestURI().substring(request.getContextPath().length())) {
             case "/api/my/articles" -> "mine";
             case "/api/editor/articles" -> "editor";
             case "/api/my/bookmarks" -> "bookmarks";
             default -> "public";
         };
-        return service.list(principal, scope, q, category, tag, status, sort, page, size);
+        return service.listAdvanced(principal, scope, q, category, tag, status, sort, page, size, null, author, after, before, replies);
     }
 
     @GetMapping("/articles/{id}")
@@ -65,6 +69,10 @@ public class ArticleController {
     public ArticleResponse submit(@PathVariable Long id, @Valid @RequestBody ArticleVersionRequest request, @AuthenticationPrincipal UserPrincipal principal) {
         return service.submit(id, request.version(), principal);
     }
+    @PostMapping("/my/articles/{id}/publish")
+    public ArticleResponse publish(@PathVariable Long id, @Valid @RequestBody ArticleVersionRequest request, @AuthenticationPrincipal UserPrincipal principal) {
+        return service.publishTopic(id, request.version(), principal);
+    }
     @PostMapping("/my/articles/{id}/withdraw")
     public ArticleResponse withdraw(@PathVariable Long id, @Valid @RequestBody ArticleVersionRequest request, @AuthenticationPrincipal UserPrincipal principal) {
         return service.withdraw(id, request.version(), principal);
@@ -72,10 +80,6 @@ public class ArticleController {
     @DeleteMapping("/my/articles/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id, @RequestParam Long version, @AuthenticationPrincipal UserPrincipal principal) {
         service.delete(id, version, principal);
-    }
-    @PostMapping("/editor/articles/{id}/review")
-    public ArticleResponse review(@PathVariable Long id, @Valid @RequestBody ArticleReviewRequest request, @AuthenticationPrincipal UserPrincipal principal) {
-        return service.review(id, request, principal);
     }
     @PutMapping("/my/bookmarks/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
     public void bookmark(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) { service.bookmark(id, principal); }

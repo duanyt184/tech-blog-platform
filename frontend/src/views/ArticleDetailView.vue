@@ -1,80 +1,289 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { ref, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getArticle, setBookmark } from '../api/articles'
+import {
+  getArticle,
+  setBookmark,
+  listArticles,
+  deleteArticle,
+} from '../api/articles'
+import { http } from '../api/http'
 import { useAuth } from '../composables/useAuth'
-import AppIcon from '../components/AppIcon.vue'
 import ArticleBody from '../components/ArticleBody.vue'
-import ArticleComments from '../components/ArticleComments.vue'
-import { renderArticleBody } from '../utils/articleBody'
-import { categoryColor, errorMessage, formatCount, formatDate } from '../utils/articles'
+import ForumReplies from '../components/ForumReplies.vue'
+import LikeButton from '../components/LikeButton.vue'
+import TopicTable from '../components/TopicTable.vue'
+import {
+  categoryColor,
+  errorMessage,
+  relativeTime,
+  formatDate,
+} from '../utils/articles'
 import type { Article } from '../types/article'
-const route = useRoute()
-const router = useRouter()
-const { user } = useAuth()
-const article = ref<Article | null>(null)
-const loading = ref(false)
-const error = ref('')
-const actionError = ref('')
-const busy = ref(false)
-const activeSection = ref('')
-const rendered = computed(() => renderArticleBody(article.value?.content || '', article.value?.contentFormat))
-const headings = computed(() => rendered.value.headings)
-let requestId = 0
+const route = useRoute(),
+  router = useRouter(),
+  { user } = useAuth()
+const article = ref<Article>(),
+  related = ref<Article[]>([]),
+  loading = ref(false),
+  error = ref(''),
+  notice = ref(''),
+  busy = ref(false),
+  reporting = ref(false),
+  reason = ref(''),
+  quote = ref('')
+let request = 0
 async function load() {
-  const request = ++requestId
+  const current = ++request
   loading.value = true
   error.value = ''
-  article.value = null
-  actionError.value = ''
+  notice.value = ''
+  article.value = undefined
+  related.value = []
   try {
-    const data = await getArticle(String(route.params.id))
-    if (request === requestId) { article.value = data; activeSection.value = headings.value[0]?.id || '' }
-  } catch (reason) { if (request === requestId) error.value = errorMessage(reason) }
-  finally { if (request === requestId) loading.value = false }
+    const a = await getArticle(String(route.params.id))
+    if (current !== request) return
+    article.value = a
+    const topics = await listArticles('public', {
+      category: a.category,
+      size: 6,
+    })
+    if (current === request)
+      related.value = topics.items.filter((t) => t.id !== a.id).slice(0, 5)
+  } catch (e) {
+    if (current === request) error.value = errorMessage(e)
+  } finally {
+    if (current === request) loading.value = false
+  }
 }
-watch([() => route.params.id, () => user.value?.id], load, { immediate: true })
-onBeforeUnmount(() => requestId++)
-async function toggleBookmark() {
-  if (!user.value) { await router.push({ path: '/login', query: { redirect: route.fullPath } }); return }
-  if (busy.value || !article.value) return
-  const current = article.value
+watch(() => route.params.id, load, { immediate: true })
+onBeforeUnmount(() => request++)
+async function auth() {
+  if (user.value) return true
+  await router.push({ path: '/login', query: { redirect: route.fullPath } })
+  return false
+}
+async function bookmark() {
+  if (!(await auth()) || !article.value || busy.value) return
   busy.value = true
-  actionError.value = ''
   try {
-    await setBookmark(current.id, !current.bookmarked)
-    if (article.value === current) current.bookmarked = !current.bookmarked
-  } catch (reason) { actionError.value = errorMessage(reason) }
-  finally { busy.value = false }
+    await setBookmark(article.value.id, !article.value.bookmarked)
+    article.value.bookmarked = !article.value.bookmarked
+  } catch (e) {
+    error.value = errorMessage(e)
+  } finally {
+    busy.value = false
+  }
 }
-function jumpTo(id: string) {
-  activeSection.value = id
-  document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
-  document.getElementById(id)?.focus({ preventScroll: true })
+async function report() {
+  if (!article.value || busy.value) return
+  busy.value = true
+  try {
+    await http.post(`/articles/${article.value.id}/reports`, {
+      reason: reason.value,
+    })
+    reporting.value = false
+    notice.value = 'Thank you. Your report has been sent to the review queue.'
+  } catch (e) {
+    error.value = errorMessage(e)
+  } finally {
+    busy.value = false
+  }
+}
+async function remove() {
+  if (!article.value || !window.confirm('Delete this topic?')) return
+  try {
+    await deleteArticle(article.value)
+    await router.push('/my-articles')
+  } catch (e) {
+    error.value = errorMessage(e)
+  }
+}
+async function share() {
+  try {
+    await navigator.clipboard.writeText(window.location.href)
+    notice.value = 'Topic link copied.'
+  } catch {
+    notice.value = window.location.href
+  }
+}
+async function refreshCounts() {
+  if (!article.value) return
+  try {
+    const { data } = await http.get(`/articles/${article.value.id}/stats`)
+    article.value.replyCount = data.replies
+    article.value.likeCount = data.likes
+  } catch (e) {
+    error.value = errorMessage(e)
+  }
+}
+function reply(withQuote = false) {
+  quote.value = withQuote
+    ? `> ${article.value?.author} wrote:\n> ${(window.getSelection()?.toString() || article.value?.content || '').slice(0, 600).replace(/\n/g, '\n> ')}\n\n`
+    : ''
+  document
+    .getElementById('reply-composer')
+    ?.scrollIntoView({ behavior: 'smooth' })
 }
 </script>
 <template>
-  <p v-if="loading" class="empty-state" role="status">正在加载文章…</p>
-  <div v-else-if="error" class="empty-state" role="alert"><h1>暂时无法阅读这篇文章</h1><p>{{ error }}</p><button class="tb-btn" @click="load">重试</button><RouterLink to="/articles">返回文章广场</RouterLink></div>
-  <div v-else-if="article" class="detail-page">
-    <nav class="breadcrumbs" aria-label="面包屑"><RouterLink to="/articles"><AppIcon name="arrow" :size="16" />文章广场</RouterLink><AppIcon name="chevron" :size="12" /><RouterLink :to="{ path: '/articles', query: { category: article.category } }">{{ article.category }}</RouterLink></nav>
-    <div class="detail-grid">
-      <article class="article-content">
-        <header class="article-header">
-          <div class="article-taxonomy"><span class="category-link"><span class="category-square" :style="{ background: categoryColor(article.category) }"></span>{{ article.category }}</span></div>
-          <h1>{{ article.title }}</h1><p class="article-deck">{{ article.summary }}</p>
-          <div class="article-byline"><span class="avatar avatar-large">{{ article.author.slice(0, 1) }}</span><div><strong>{{ article.author }}</strong><p><time :datetime="article.publishedAt || undefined">{{ formatDate(article.publishedAt) }}</time></p></div><span class="detail-views"><AppIcon name="eye" :size="16" />{{ formatCount(article.viewCount) }}</span></div>
-        </header>
-        <ArticleBody :content="article.content || ''" :content-format="article.contentFormat" :rendered="rendered" />
-        <div class="article-closing"><span>—</span><p>感谢阅读，愿这份记录对你有所启发。</p></div>
-        <div class="article-bottom-actions"><div class="article-taxonomy"><RouterLink v-for="tag in article.tags" :key="tag" :to="{ path: '/articles', query: { tag } }" class="article-tag"># {{ tag }}</RouterLink></div><button class="tb-btn" :class="{ 'is-bookmarked': article.bookmarked }" :aria-pressed="!!article.bookmarked" :disabled="busy" @click="toggleBookmark"><AppIcon :name="article.bookmarked ? 'check' : 'bookmark'" :size="17" />{{ busy ? '正在保存…' : article.bookmarked ? '已收藏' : '收藏文章' }}</button></div>
-        <p v-if="actionError" class="error-message" role="alert">{{ actionError }}</p>
-        <p v-else class="local-storage-note" aria-live="polite">{{ article.bookmarked ? '已保存到你的账号，可在「我的收藏」中查看。' : '登录后可收藏文章，下次继续阅读。' }}</p>
-        <div class="author-card"><span class="avatar avatar-large">{{ article.author.slice(0, 1) }}</span><div><small>本文作者</small><h3>{{ article.author }}</h3></div><AppIcon name="code" :size="30" /></div>
-        <ArticleComments :article-id="article.id" />
-      </article>
-      <aside class="reading-sidebar"><div class="reading-sidebar-inner"><p class="nav-section-label">本文目录</p><nav v-if="headings.length" aria-label="文章目录"><button v-for="heading in headings" :key="heading.id" :style="{ paddingLeft: `${12 + (heading.depth - 1) * 10}px` }" :class="{ active: activeSection === heading.id }" @click="jumpTo(heading.id)">{{ heading.text }}</button></nav><p v-else class="field-hint">本文没有分节标题</p><div class="reading-sidebar-divider"></div><p class="reading-sidebar-label">值得记录，也值得分享。</p><p class="reading-sidebar-copy">将你的技术实践整理成文章，<br />让更多人从中获得启发。</p><RouterLink to="/write" class="tb-btn"><AppIcon name="edit" :size="16" />开始写作</RouterLink></div></aside>
-    </div>
-    <footer class="page-footer"><span>© 2026 码上 · 让技术分享更有价值</span><RouterLink to="/articles">返回文章广场 ↑</RouterLink></footer>
+  <p v-if="loading" class="empty-state">Loading topic…</p>
+  <p v-if="error" class="error-message" role="alert">
+    {{ error }} <button v-if="!article" @click="load">Retry</button>
+  </p>
+  <template v-if="article"
+    ><header class="topic-header">
+      <h1>{{ article.title }}</h1>
+      <div class="topic-taxonomy">
+        <RouterLink
+          :to="{ path: '/articles', query: { category: article.category } }"
+          ><span
+            class="category-square"
+            :style="{ background: categoryColor(article.category) }"
+          ></span
+          >{{ article.category }}</RouterLink
+        ><RouterLink
+          v-for="tag in article.tags"
+          :key="tag"
+          :to="{ path: '/articles', query: { tag } }"
+          >{{ tag }}</RouterLink
+        >
+      </div>
+    </header>
+    <div class="discussion-layout">
+      <div class="discussion-main">
+        <article class="forum-post">
+          <RouterLink
+            :to="`/u/${article.authorId}`"
+            class="avatar post-avatar"
+            :style="{ background: categoryColor(article.category) }"
+            >{{ article.author.slice(0, 1).toUpperCase() }}</RouterLink
+          >
+          <div class="post-main">
+            <div class="post-meta">
+              <RouterLink :to="`/u/${article.authorId}`"
+                ><strong>{{ article.author }}</strong></RouterLink
+              ><time :datetime="article.createdAt">{{
+                relativeTime(article.createdAt)
+              }}</time>
+            </div>
+            <ArticleBody
+              :content="article.content || ''"
+              :content-format="article.contentFormat"
+            />
+            <div class="post-controls">
+              <LikeButton
+                :key="article.id"
+                :article-id="article.id"
+                @changed="article.likeCount = $event"
+              /><button
+                class="tb-btn"
+                :aria-pressed="!!article.bookmarked"
+                :disabled="busy"
+                @click="bookmark"
+              >
+                {{ article.bookmarked ? '▣ Saved' : '♧ Bookmark' }}</button
+              ><button class="tb-btn" @click="share">↗ Share</button
+              ><button
+                class="tb-btn"
+                @click="
+                  async () => {
+                    if (await auth()) reporting = true
+                  }
+                "
+              >
+                ⚑ Flag</button
+              ><template v-if="user?.id === article.authorId"
+                ><RouterLink :to="`/write/${article.id}`" class="tb-btn"
+                  >Edit</RouterLink
+                ><button class="tb-btn danger-button" @click="remove">
+                  Delete
+                </button></template
+              ><button class="tb-btn" @click="reply(true)">❞ Quote</button
+              ><button class="tb-btn" @click="reply()">↶ Reply</button>
+            </div>
+          </div>
+        </article>
+        <div class="topic-summary">
+          <div>
+            <small>created</small
+            ><span>{{ formatDate(article.createdAt) }}</span>
+          </div>
+          <div>
+            <small>last activity</small
+            ><span>{{ relativeTime(article.updatedAt) }}</span>
+          </div>
+          <div>
+            <strong>{{ article.replyCount }}</strong
+            ><small>replies</small>
+          </div>
+          <div>
+            <strong>{{ article.viewCount }}</strong
+            ><small>views</small>
+          </div>
+          <div>
+            <strong>{{ article.likeCount }}</strong
+            ><small>likes</small>
+          </div>
+        </div>
+        <p v-if="notice" role="status" class="success-message">{{ notice }}</p>
+        <ForumReplies
+          :key="article.id"
+          :article-id="article.id"
+          :quote="quote"
+          @posted="refreshCounts"
+          @removed="refreshCounts"
+        />
+        <section v-if="related.length" class="related-section">
+          <h2>Related Topics</h2>
+          <TopicTable :items="related" />
+        </section>
+      </div>
+      <aside class="topic-timeline">
+        <div>
+          <time>{{ formatDate(article.createdAt) }}</time>
+          <div class="timeline-track">
+            <strong>1 / {{ article.replyCount + 1 }}</strong
+            ><span>{{ relativeTime(article.createdAt) }}</span>
+          </div>
+          <button class="tb-btn" @click="reply()">↶ Reply</button>
+        </div>
+      </aside>
+    </div></template
+  >
+  <div
+    v-if="reporting"
+    class="report-overlay"
+    @click.self="reporting = false"
+    @keydown.esc="reporting = false"
+  >
+    <form
+      class="report-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Report topic"
+      @submit.prevent="report"
+    >
+      <h2>Flag this topic</h2>
+      <p>Tell the moderators why this needs attention.</p>
+      <textarea
+        v-model="reason"
+        required
+        maxlength="500"
+        rows="4"
+        aria-label="Report reason"
+        autofocus
+      ></textarea>
+      <div class="row-actions">
+        <button class="tb-btn" type="button" @click="reporting = false">
+          Cancel</button
+        ><button
+          class="tb-btn tb-btn--primary"
+          :disabled="busy || !reason.trim()"
+        >
+          Send report
+        </button>
+      </div>
+    </form>
   </div>
 </template>

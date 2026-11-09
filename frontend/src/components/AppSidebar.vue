@@ -1,93 +1,138 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import AppIcon from './AppIcon.vue'
-import { categories } from '../utils/articles'
+import { categories, loadCategories } from '../utils/articles'
+import { http } from '../api/http'
 import { useAuth } from '../composables/useAuth'
-import { getCategoryStats } from '../api/articles'
-import type { CategoryStats } from '../types/article'
-const { isEditor } = useAuth()
-const route = useRoute()
+import { useTheme } from '../composables/useTheme'
+import AppIcon from './AppIcon.vue'
 defineProps<{ open: boolean }>()
-defineEmits<{ close: [] }>()
-
-// 分类右侧的数字来自公开统计接口，只统计已发布文章
-const stats = ref<CategoryStats | null>(null)
-let refreshTimer: number | undefined
-
-const countOf = (name: string) => stats.value?.categories.find(item => item.name === name)?.count ?? 0
-
-async function refreshStats() {
+const route = useRoute(),
+  { user, isEditor } = useAuth(),
+  { toggle } = useTheme()
+const tags = ref<{ name: string }[]>([])
+const preferredTags = [
+  'Python',
+  'Java',
+  'TypeScript',
+  'SQL',
+  '算法题',
+  '学习笔记',
+  '项目实践',
+  '概念解析',
+  '求助答疑',
+  '资源分享',
+]
+onMounted(async () => {
   try {
-    stats.value = await getCategoryStats()
+    await loadCategories()
+    tags.value = (await http.get('/community/tags')).data
+    const rank = (name: string) => {
+      const index = preferredTags.findIndex(
+        (tag) => tag.toLowerCase() === name.toLowerCase(),
+      )
+      return index < 0 ? preferredTags.length : index
+    }
+    tags.value.sort((a, b) => rank(a.name) - rank(b.name))
   } catch {
-    // 统计失败不影响导航，保留上一次的数字
+    /* Pages show fetch errors and allow retry. */
   }
-}
-
-function handleVisible() {
-  if (document.visibilityState === 'visible') {
-    void refreshStats()
-  }
-}
-
-onMounted(() => {
-  void refreshStats()
-  // 别人发布文章后无需手动刷新：定时轮询 + 页面重新可见时立即拉取
-  refreshTimer = window.setInterval(() => { void refreshStats() }, 60_000)
-  document.addEventListener('visibilitychange', handleVisible)
 })
-
-onBeforeUnmount(() => {
-  if (refreshTimer) {
-    window.clearInterval(refreshTimer)
-  }
-  document.removeEventListener('visibilitychange', handleVisible)
-})
-
-// 站内跳转（投稿、审核通过后回到列表等）都会重新拉取，数字立刻更新
-watch(() => route.fullPath, () => { void refreshStats() })
 </script>
 <template>
-  <aside id="site-sidebar" class="site-sidebar" :class="{ 'is-open': open }" aria-label="主导航">
-    <nav @click="$emit('close')">
-      <p class="nav-section-label">探索</p>
-      <RouterLink to="/" class="sidebar-link" :class="{ selected: (route.path === '/' || route.path === '/articles') && !route.query.category && !route.query.tag }">
-        <AppIcon name="home" :size="18" />文章广场</RouterLink>
-      <RouterLink to="/bookmarks" class="sidebar-link" :class="{ selected: route.path === '/bookmarks' }">
-        <AppIcon name="bookmark" :size="18" />我的收藏
-      </RouterLink>
-      <div class="nav-divider">
-      </div>
-      <p class="nav-section-label">技术分类 <span>{{ stats ? stats.total : '—' }}</span>
-      </p>
-      <RouterLink v-for="category in categories" :key="category.name" :to="{ path: '/articles', query: { category: category.name } }" class="sidebar-link category-nav" :class="{ selected: route.query.category === category.name }">
-        <span class="category-square" :style="{ background: category.color }">
-        </span>{{ category.name }}
-        <span v-if="stats" class="category-count">{{ countOf(category.name) }}</span>
-      </RouterLink>
-      <div class="nav-divider">
-      </div>
-      <p class="nav-section-label">创作空间</p>
-      <RouterLink to="/write" class="sidebar-link" active-class="selected">
-        <AppIcon name="edit" :size="18" />写文章</RouterLink>
-      <RouterLink to="/my-articles" class="sidebar-link" active-class="selected">
-        <AppIcon name="file" :size="18" />我的文章</RouterLink>
-      <RouterLink to="/comments" class="sidebar-link" active-class="selected">
-        <AppIcon name="comment" :size="18" />评论</RouterLink>
-      <RouterLink v-if="isEditor" to="/editor" class="sidebar-link" active-class="selected">
-        <AppIcon name="check" :size="18" />审核工作台
-      </RouterLink>
-      <RouterLink v-if="isEditor" to="/reports" class="sidebar-link" active-class="selected">
-        <AppIcon name="flag" :size="18" />举报处理
-      </RouterLink>
+  <aside
+    id="site-sidebar"
+    class="site-sidebar"
+    :class="{ 'is-open': open }"
+    :inert="!open"
+    :aria-hidden="!open"
+    aria-label="Main navigation"
+  >
+    <nav>
+      <RouterLink
+        to="/"
+        class="sidebar-link"
+        :class="{ selected: route.path === '/' }"
+        ><AppIcon name="home" :size="16" />Home</RouterLink
+      >
+      <RouterLink
+        to="/latest"
+        class="sidebar-link"
+        :class="{
+          selected: ['/latest', '/articles', '/top'].includes(route.path),
+        }"
+        ><AppIcon name="book" :size="16" />Topics</RouterLink
+      >
+      <RouterLink to="/my-articles" class="sidebar-link" active-class="selected"
+        ><AppIcon name="comment" :size="16" />My Posts</RouterLink
+      >
+      <RouterLink to="/drafts" class="sidebar-link" active-class="selected"
+        ><AppIcon name="file" :size="16" />My Drafts</RouterLink
+      >
+      <RouterLink to="/bookmarks" class="sidebar-link" active-class="selected"
+        ><AppIcon name="bookmark" :size="16" />Bookmarks</RouterLink
+      >
+      <RouterLink to="/guidelines" class="sidebar-link" active-class="selected"
+        ><AppIcon name="check" :size="16" />Guidelines</RouterLink
+      >
+      <template v-if="user"
+        ><RouterLink :to="`/u/${user.id}?tab=activity`" class="sidebar-link"
+          ><AppIcon name="clock" :size="16" />My activity</RouterLink
+        ><RouterLink to="/settings" class="sidebar-link" active-class="selected"
+          ><AppIcon name="edit" :size="16" />Preferences</RouterLink
+        ></template
+      >
+      <div class="nav-divider"></div>
+      <p class="nav-section-label">⌄ <span>Categories</span></p>
+      <RouterLink
+        v-for="c in categories.filter((c) => !c.parentId)"
+        :key="c.id"
+        :to="{ path: '/articles', query: { category: c.name } }"
+        class="sidebar-link"
+        :class="{ selected: route.query.category === c.name }"
+        ><span class="category-square" :style="{ background: c.color }"></span
+        >{{ c.name }}</RouterLink
+      >
+      <RouterLink
+        to="/categories"
+        class="sidebar-link all-link"
+        active-class="selected"
+        ><AppIcon name="list" :size="16" />All categories</RouterLink
+      >
+      <div class="nav-divider"></div>
+      <p class="nav-section-label">⌄ <span>Tags</span></p>
+      <RouterLink
+        v-for="t in tags.slice(0, 10)"
+        :key="t.name"
+        :to="{ path: '/articles', query: { tag: t.name } }"
+        class="sidebar-link"
+        ><AppIcon name="tag" :size="16" />{{ t.name }}</RouterLink
+      >
+      <RouterLink to="/tags" class="sidebar-link" active-class="selected"
+        ><AppIcon name="list" :size="16" />All tags</RouterLink
+      >
+      <template v-if="isEditor"
+        ><div class="nav-divider"></div>
+        <RouterLink to="/review" class="sidebar-link" active-class="selected"
+          ><AppIcon name="flag" :size="16" />Review queue</RouterLink
+        ></template
+      ><RouterLink
+        v-if="user?.role === 'ADMIN'"
+        to="/admin"
+        class="sidebar-link"
+        active-class="selected"
+        ><AppIcon name="check" :size="16" />Admin</RouterLink
+      >
     </nav>
     <div class="sidebar-bottom">
-      <span class="sidebar-motto">把经验写下来，<br />让知识流动起来。</span>
-      <p>
-        <span class="status-dot">
-        </span>技术分享 · 投稿协作</p>
-      <small>码上 / 技术分享与投稿协作</small>
+      <button
+        class="icon-button"
+        aria-label="Toggle color theme"
+        title="Toggle light / dark theme"
+        @click="toggle"
+      >
+        <AppIcon name="sun" :size="17" />
+      </button>
     </div>
   </aside>
 </template>

@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "checks": [
+    "13 distinct category colors",
+    "Footer branding removed",
+    "Advanced search icon opens expanded filters",
+    "Category context preserved in composer",
+    "Live Markdown preview",
+    "Resize, expand and close controls",
+    "Light and dark composer screenshots",
+    "Mobile composer fits screen and toggles preview without losing source",
+    "No runtime errors"
+  ]
+}

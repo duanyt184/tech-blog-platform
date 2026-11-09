@@ -50,16 +50,16 @@ async function decide(decision: 'APPROVE' | 'REJECT') {
   <div class="work-page review-page">
     <header class="work-heading"><h1>投稿审核</h1><RouterLink to="/editor" class="tb-btn">返回队列</RouterLink></header>
     <p v-if="loading" class="empty-state" role="status">正在加载投稿…</p>
-    <div v-if="error" class="error-message" role="alert"><p>{{ error }}</p><button class="tb-btn" :disabled="busy" @click="load">重新加载最新版本</button></div>
+    <div v-if="error" class="error-message" role="alert"><p>{{ error }}</p><button class="tb-btn" :disabled="busy" @click="load">重新加载文章</button></div>
     <p v-if="notice" class="success-message" role="status">{{ notice }}</p>
     <template v-if="article && !loading">
-      <header class="article-header"><span class="status-badge" :data-status="article.status">{{ statusLabels[article.status] }}</span><h1>{{ article.title }}</h1><p>{{ article.author }} · {{ article.category }} · 版本 {{ article.version }}</p><p class="article-deck">{{ article.summary }}</p></header>
+      <header class="article-header"><span class="status-badge" :data-status="article.status">{{ statusLabels[article.status] }}</span><h1>{{ article.title }}</h1><p>{{ article.author }} · {{ article.category }}</p><p class="article-deck">{{ article.summary }}</p></header>
       <ArticleBody :content="article.content || ''" :content-format="article.contentFormat" />
       <section v-if="article.status === 'PENDING'" class="review-decision">
         <p v-if="article.authorId === user?.id" class="workflow-notice">这是你自己的投稿，需要由其他编辑审核。</p>
         <template v-else><label>审核意见（退回时必填）<textarea v-model="comment" rows="4" maxlength="2000" :disabled="busy" placeholder="请给作者具体、可执行的建议"></textarea></label><div class="row-actions"><button class="tb-btn" :disabled="busy" @click="decide('REJECT')">退回修改</button><button class="tb-btn tb-btn--primary" :disabled="busy" @click="decide('APPROVE')">{{ busy ? '正在处理…' : '审核通过并发布' }}</button></div></template>
       </section>
-      <ReviewHistory :events="article.reviews || []" />
+      <ReviewHistory :events="(article.reviews || []).slice(0, 1)" />
     </template>
   </div>
 </template>

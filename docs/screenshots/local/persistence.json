@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "topicId": 60,
+  "authorId": 10,
+  "checks": [
+    "Published topic title and Markdown unchanged after backend restart",
+    "Replies unchanged after backend restart",
+    "Reply and topic like counts unchanged after backend restart",
+    "Bookmark still present after a fresh login"
+  ],
+  "database": "isolated forum_test",
+  "session": "New login after restart"
+}

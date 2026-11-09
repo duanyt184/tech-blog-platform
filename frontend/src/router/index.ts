@@ -9,13 +9,18 @@ declare module 'vue-router' {
     /** 只有未登录用户能看的页面（登录页、注册页），已登录会被送回首页 */
     guestOnly?: boolean
     requiresEditor?: boolean
+    requiresAdmin?: boolean
   }
 }
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', name: 'home', component: () => import('../views/HomeView.vue') },
+    {
+      path: '/',
+      name: 'home',
+      component: () => import('../views/CategoriesView.vue'),
+    },
     {
       path: '/login',
       name: 'login',
@@ -28,9 +33,27 @@ const router = createRouter({
       component: () => import('../views/RegisterView.vue'),
       meta: { guestOnly: true },
     },
-    { path: '/articles', name: 'articles', component: () => import('../views/ArticlesView.vue') },
+    { path: '/latest', component: () => import('../views/ArticlesView.vue') },
+    { path: '/top', component: () => import('../views/ArticlesView.vue') },
+    { path: '/search', component: () => import('../views/ArticlesView.vue') },
+    { path: '/tags', component: () => import('../views/DirectoryView.vue') },
+    {
+      path: '/guidelines',
+      component: () => import('../views/DirectoryView.vue'),
+    },
+    {
+      path: '/drafts',
+      component: () => import('../views/MyArticlesView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/articles',
+      name: 'articles',
+      component: () => import('../views/ArticlesView.vue'),
+    },
     {
       path: '/article/:id',
+      alias: '/t/:id',
       name: 'article-detail',
       component: () => import('../views/ArticleDetailView.vue'),
     },
@@ -46,11 +69,41 @@ const router = createRouter({
       component: () => import('../views/MyArticlesView.vue'),
       meta: { requiresAuth: true },
     },
-    { path: '/bookmarks', component: () => import('../views/ArticlesView.vue'), meta: { requiresAuth: true } },
-    { path: '/comments', component: () => import('../views/CommentsView.vue'), meta: { requiresAuth: true } },
-    { path: '/editor', component: () => import('../views/EditorView.vue'), meta: { requiresAuth: true, requiresEditor: true } },
-    { path: '/reports', component: () => import('../views/ReportsView.vue'), meta: { requiresAuth: true, requiresEditor: true } },
-    { path: '/editor/:id', component: () => import('../views/ReviewArticleView.vue'), meta: { requiresAuth: true, requiresEditor: true } },
+    {
+      path: '/bookmarks',
+      component: () => import('../views/ArticlesView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/comments',
+      component: () => import('../views/CommentsView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/review',
+      alias: ['/editor', '/reports'],
+      component: () => import('../views/ModerationView.vue'),
+      meta: { requiresAuth: true, requiresEditor: true },
+    },
+    {
+      path: '/categories',
+      component: () => import('../views/CategoriesView.vue'),
+    },
+    {
+      path: '/u/:id',
+      alias: '/blog/:id',
+      component: () => import('../views/ProfileView.vue'),
+    },
+    {
+      path: '/settings',
+      component: () => import('../views/SettingsView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/admin',
+      component: () => import('../views/AdminView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
     // 未知路径回首页，避免出现空白页
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
@@ -82,9 +135,16 @@ router.beforeEach(async (to) => {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
 
-  if (to.meta.requiresEditor && user.value?.role !== 'EDITOR' && user.value?.role !== 'ADMIN') {
+  if (
+    to.meta.requiresEditor &&
+    user.value?.role !== 'EDITOR' &&
+    user.value?.role !== 'ADMIN'
+  ) {
     return { path: '/my-articles' }
   }
+
+  if (to.meta.requiresAdmin && user.value?.role !== 'ADMIN')
+    return { path: '/' }
 
   if (to.meta.guestOnly && user.value) {
     return { path: '/' }
@@ -100,7 +160,10 @@ router.beforeEach(async (to) => {
 window.addEventListener(AUTH_UNAUTHORIZED_EVENT, () => {
   const current = router.currentRoute.value
   if (current.meta.requiresAuth) {
-    void router.replace({ path: '/login', query: { redirect: current.fullPath } })
+    void router.replace({
+      path: '/login',
+      query: { redirect: current.fullPath },
+    })
   }
 })
 

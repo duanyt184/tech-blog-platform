@@ -1,20 +1,28 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref } from 'vue'
 import AppHeader from './components/AppHeader.vue'
 import AppSidebar from './components/AppSidebar.vue'
-const menuOpen = ref(false)
-const route = useRoute()
-watch(() => route.fullPath, () => { menuOpen.value = false })
+import { useTheme } from './composables/useTheme'
+useTheme()
+const menuOpen = ref(window.innerWidth > 900)
 </script>
 <template>
-  <div class="app-shell" @keydown.esc="menuOpen = false">
+  <div
+    class="app-shell"
+    :class="{ 'sidebar-open': menuOpen }"
+    @keydown.esc="menuOpen = false"
+  >
     <a class="skip-link" href="#main-content">跳转到内容</a>
     <AppHeader :menu-open="menuOpen" @toggle-menu="menuOpen = !menuOpen" />
-    <div class="workspace">
-      <button v-if="menuOpen" type="button" class="sidebar-backdrop" aria-label="关闭导航" @click="menuOpen = false">
-      </button>
-      <AppSidebar :open="menuOpen" @close="menuOpen = false" />
+    <div class="workspace" :class="{ 'nav-expanded': menuOpen }">
+      <button
+        v-if="menuOpen"
+        type="button"
+        class="sidebar-backdrop"
+        aria-label="关闭导航"
+        @click="menuOpen = false"
+      ></button>
+      <AppSidebar :open="menuOpen" />
       <main id="main-content" class="app-main" tabindex="-1">
         <RouterView />
       </main>

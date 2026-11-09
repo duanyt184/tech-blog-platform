@@ -1,0 +1,298 @@
+.sidebar-bottom {
+  justify-content: flex-end;
+}
+.header-search button {
+  align-items: center;
+  justify-content: center;
+}
+.composer-page {
+  padding-bottom: 330px;
+}
+.composer-page-minimized {
+  padding-bottom: 50px;
+}
+.topic-composer {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 55;
+  height: var(--composer-height, 560px);
+  max-height: calc(100dvh - 50px);
+  background: var(--tb-bg);
+  border-top: 1px solid var(--tb-border-strong);
+  box-shadow: 0 -4px 18px #00000012;
+}
+.topic-composer.is-expanded {
+  height: calc(100dvh - 50px);
+}
+.topic-composer.is-minimized {
+  height: 48px;
+}
+.composer-resize {
+  position: absolute;
+  top: -5px;
+  left: 0;
+  right: 0;
+  height: 9px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.composer-resize::after {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--tb-border-strong);
+  margin: 3px auto;
+}
+.composer-inner {
+  max-width: 1150px;
+  height: 100%;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+}
+.composer-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 44px;
+  gap: 12px;
+}
+.composer-heading h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.composer-heading h1 span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.composer-window-actions {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.composer-content,
+.topic-composer .writing-form {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+.topic-composer .writing-form fieldset {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+}
+.topic-composer .writing-form label {
+  margin: 0;
+}
+.topic-composer .composer-title {
+  width: calc(50% - 8px);
+}
+.topic-composer input,
+.topic-composer select {
+  height: 36px;
+  border-radius: 4px;
+  font-size: 15px;
+  padding: 6px 9px;
+}
+.topic-composer .topic-title-input {
+  font-size: 16px;
+}
+.topic-composer .composer-taxonomy {
+  display: flex;
+  width: calc(50% - 8px);
+  gap: 8px;
+}
+.topic-composer .composer-category {
+  position: relative;
+  width: 47%;
+  min-width: 0;
+}
+.topic-composer .composer-category select {
+  padding-left: 26px;
+}
+.composer-category .category-square {
+  position: absolute;
+  top: 13px;
+  left: 10px;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+.topic-composer .composer-tags {
+  flex: 1;
+  min-width: 0;
+}
+.topic-composer .markdown-editor.is-compact {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  margin: 0;
+}
+.composer-format-toolbar {
+  display: flex;
+  align-items: center;
+  flex: 0 0 34px;
+  gap: 1px;
+  width: calc(50% - 8px);
+  padding: 2px 4px;
+  border: 1px solid var(--tb-border-strong);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+}
+.composer-format-toolbar .icon-button {
+  padding: 5px 8px;
+  border-radius: 3px;
+  color: var(--tb-muted);
+}
+.composer-format-toolbar .composer-preview-toggle {
+  margin-left: auto;
+}
+.composer-preview-toggle[aria-pressed='true'] {
+  color: var(--tb-text);
+  background: var(--tb-hover);
+}
+.composer-more-tools {
+  position: relative;
+}
+.composer-more-tools summary {
+  list-style: none;
+  line-height: 18px;
+  cursor: pointer;
+}
+.composer-more-tools summary::-webkit-details-marker {
+  display: none;
+}
+.composer-tools-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  min-width: 170px;
+  padding: 8px;
+  border: 1px solid var(--tb-border-strong);
+  background: var(--tb-surface);
+  box-shadow: var(--tb-shadow);
+  border-radius: 5px;
+  z-index: 2;
+}
+.composer-tools-menu button {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  background: none;
+  text-align: left;
+}
+.composer-tools-menu button:hover {
+  background: var(--tb-hover);
+}
+.topic-composer .composer-tools-menu label {
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+.topic-composer .markdown-editor-panes {
+  flex: 1;
+  min-height: 0;
+  gap: 16px;
+}
+.topic-composer .markdown-editor-panes .body-editor {
+  min-height: 0;
+  height: 100%;
+  resize: none;
+  border-radius: 0 0 4px 4px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.topic-composer .markdown-editor-panes .editor-preview {
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  padding: 4px 10px 12px;
+  border: none;
+  border-radius: 0;
+  background: var(--tb-bg);
+}
+.topic-composer .editor-actions {
+  flex: 0 0 60px;
+  margin: 0;
+  gap: 15px;
+}
+.topic-composer .editor-actions .tb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 4px;
+}
+.composer-text-button {
+  color: var(--tb-muted);
+  background: transparent;
+  padding: 8px 0;
+}
+.composer-text-button:hover {
+  color: var(--tb-text);
+}
+.composer-notice {
+  color: var(--tb-muted);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.topic-composer .error-message {
+  padding: 6px 10px;
+  margin: 0 0 5px;
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .topic-composer {
+    height: calc(100dvh - 50px);
+  }
+  .composer-inner {
+    padding: 0 12px;
+  }
+  .composer-heading {
+    flex-basis: 42px;
+  }
+  .composer-heading h1 {
+    font-size: 14px;
+  }
+  .composer-heading h1 > svg {
+    display: none;
+  }
+  .topic-composer .composer-title,
+  .topic-composer .composer-taxonomy,
+  .composer-format-toolbar {
+    width: 100%;
+  }
+  .composer-format-toolbar .icon-button {
+    padding: 5px 6px;
+  }
+  .topic-composer .markdown-editor-panes.is-split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .topic-composer .editor-actions {
+    gap: 12px;
+    flex-basis: 58px;
+    flex-wrap: nowrap;
+  }
+  .topic-composer .editor-actions > span {
+    display: none;
+  }
+  .topic-composer .editor-actions button {
+    white-space: nowrap;
+    font-size: 13px;
+  }
+}

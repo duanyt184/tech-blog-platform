@@ -2,6 +2,21 @@
 withDefaults(defineProps<{ name: string; size?: number }>(), { size: 20 })
 const paths: Record<string, string> = {
   menu: 'M4 6h16M4 12h16M4 18h16',
+  list: 'M9 5h12M9 12h12M9 19h12M3 5h1M3 12h1M3 19h1',
+  tag: 'M3 3h8l10 10-8 8L3 11ZM7.5 7.5h.01',
+  sliders:
+    'M3 6h3m4 0h11M3 12h11m4 0h3M3 18h5m4 0h9M6 3v6h4V3ZM14 9v6h4V9ZM8 15v6h4v-6Z',
+  bold: 'M6 4h7a4 4 0 0 1 0 8H6Zm0 8h8a4 4 0 0 1 0 8H6Z',
+  italic: 'M11 4h9M4 20h9M15 4 9 20',
+  link: 'm10 13 4-4M8 16l-2 2a4 4 0 0 1-6-6l6-6a4 4 0 0 1 6 0m0 2 2-2a4 4 0 0 1 6 6l-6 6a4 4 0 0 1-6 0',
+  quote: 'M3 5h7v7H6c0 3-1 5-3 7m11-14h7v7h-4c0 3-1 5-3 7',
+  image: 'M3 3h18v18H3Zm0 14 6-6 4 4 3-3 5 5M17 7h.01',
+  ordered:
+    'M10 5h11M10 12h11M10 19h11M3 3h1v4M3 11c3-3 4 1 0 3h3M3 18h3l-2 2h2',
+  expand: 'M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5',
+  minimize: 'M5 12h14',
+  smile:
+    'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0M7 14s2 4 5 4 5-4 5-4M8 8h.01M16 8h.01',
   search: 'm21 21-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',
   home: 'm3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1ZM9 21v-8h6v8',
   book: 'M4 3h6a3 3 0 0 1 3 3v15a5 5 0 0 0-4-2H3V4a1 1 0 0 1 1-1ZM13 6a3 3 0 0 1 3-3h5v16h-4a5 5 0 0 0-4 2',
@@ -12,19 +27,39 @@ const paths: Record<string, string> = {
   chevron: 'm9 5 7 7-7 7',
   clock: 'M12 8v5l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
   eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12ZM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
-  heart: 'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z',
+  heart:
+    'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z',
   pin: 'm16 3 5 5-4 1-4 5v3l-3-3-6 6m6-6-3-3h3l5-4Z',
   close: 'm6 6 12 12M6 18 18 6',
   check: 'm5 12 4 4L19 6',
   code: 'm8 6-6 6 6 6m8-12 6 6-6 6m-3-15-2 18',
   sun: 'M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
   star: 'm12 3.2 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.6l6.1-.9Z',
-  comment: 'M21 11.5a8.5 8.5 0 0 1-8.5 8.5H7l-4 3V11.5A8.5 8.5 0 0 1 11.5 3h1A8.5 8.5 0 0 1 21 11.5Z',
+  comment:
+    'M21 11.5a8.5 8.5 0 0 1-8.5 8.5H7l-4 3V11.5A8.5 8.5 0 0 1 11.5 3h1A8.5 8.5 0 0 1 21 11.5Z',
   flag: 'M5 21V4m0 0h13l-3 4.5L18 13H5',
+}
+// Filled icons from the public Cursor Forum sprite (Font Awesome Free, CC BY 4.0).
+// Attribution: https://fontawesome.com/license/free
+const filledPaths: Record<string, string> = {
+  sliders:
+    'M32 64C14.3 64 0 78.3 0 96s14.3 32 32 32l86.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48L480 128c17.7 0 32-14.3 32-32s-14.3-32-32-32L265.3 64C253 35.7 224.8 16 192 16s-61 19.7-73.3 48L32 64zm0 160c-17.7 0-32 14.3-32 32s14.3 32 32 32l246.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48l54.7 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-54.7 0c-12.3-28.3-40.5-48-73.3-48s-61 19.7-73.3 48L32 224zm0 160c-17.7 0-32 14.3-32 32s14.3 32 32 32l54.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48L480 448c17.7 0 32-14.3 32-32s-14.3-32-32-32l-246.7 0c-12.3-28.3-40.5-48-73.3-48s-61 19.7-73.3 48L32 384z',
+  tag: 'M32.5 96l0 149.5c0 17 6.7 33.3 18.7 45.3l192 192c25 25 65.5 25 90.5 0L483.2 333.3c25-25 25-65.5 0-90.5l-192-192C279.2 38.7 263 32 246 32L96.5 32c-35.3 0-64 28.7-64 64zm112 16a32 32 0 1 1 0 64 32 32 0 1 1 0-64z',
+  list: 'M40 48C26.7 48 16 58.7 16 72l0 48c0 13.3 10.7 24 24 24l48 0c13.3 0 24-10.7 24-24l0-48c0-13.3-10.7-24-24-24L40 48zM192 64c-17.7 0-32 14.3-32 32s14.3 32 32 32l288 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L192 64zm0 160c-17.7 0-32 14.3-32 32s14.3 32 32 32l288 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-288 0zm0 160c-17.7 0-32 14.3-32 32s14.3 32 32 32l288 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-288 0zM16 232l0 48c0 13.3 10.7 24 24 24l48 0c13.3 0 24-10.7 24-24l0-48c0-13.3-10.7-24-24-24l-48 0c-13.3 0-24 10.7-24 24zM40 368c-13.3 0-24 10.7-24 24l0 48c0 13.3 10.7 24 24 24l48 0c13.3 0 24-10.7 24-24l0-48c0-13.3-10.7-24-24-24l-48 0z',
 }
 </script>
 <template>
-  <svg :width="size" :height="size" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <path :d="paths[name] || paths.file" />
+  <svg
+    :width="size"
+    :height="size"
+    :viewBox="filledPaths[name] ? '0 0 512 512' : '0 0 24 24'"
+    :fill="filledPaths[name] ? 'currentColor' : 'none'"
+    :stroke="filledPaths[name] ? 'none' : 'currentColor'"
+    stroke-width="1.65"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <path :d="filledPaths[name] || paths[name] || paths.file" />
   </svg>
 </template>

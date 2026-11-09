@@ -17,7 +17,12 @@ const route = useRoute()
 const { registerAccount } = useAuth()
 
 const formRef = ref<FormInstance>()
-const form = reactive({ username: '', email: '', password: '', confirmPassword: '' })
+const form = reactive({
+  username: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+})
 const submitting = ref(false)
 const errorMessage = ref('')
 
@@ -25,7 +30,11 @@ const errorMessage = ref('')
 const rules: FormRules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
-    { pattern: /^[A-Za-z0-9_]{3,20}$/, message: '用户名需为 3-20 位字母、数字或下划线', trigger: 'blur' },
+    {
+      pattern: /^[A-Za-z0-9_]{3,20}$/,
+      message: '用户名需为 3-20 位字母、数字或下划线',
+      trigger: 'blur',
+    },
   ],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
@@ -70,10 +79,14 @@ async function handleSubmit() {
       password: form.password,
       confirmPassword: form.confirmPassword,
     })
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
+    const redirect =
+      typeof route.query.redirect === 'string' ? route.query.redirect : '/'
     await router.replace(redirect)
   } catch (error) {
-    errorMessage.value = error instanceof ApiError ? error.firstFieldMessage : '注册失败，请稍后重试'
+    errorMessage.value =
+      error instanceof ApiError
+        ? error.firstFieldMessage
+        : '注册失败，请稍后重试'
   } finally {
     submitting.value = false
   }
@@ -84,9 +97,9 @@ async function handleSubmit() {
   <section class="auth-page">
     <div class="auth-card">
       <header class="auth-card__head">
-        <p class="auth-card__eyebrow">码上 · 技术分享社区</p>
+        <p class="auth-card__eyebrow">码上社区</p>
         <h1 class="auth-card__title">创建账号</h1>
-        <p class="auth-card__subtitle">注册后即可投稿，把踩过的坑写成别人的捷径</p>
+        <p class="auth-card__subtitle">加入社区，提问、交流并分享你的经验。</p>
       </header>
 
       <ElAlert
@@ -107,10 +120,20 @@ async function handleSubmit() {
         @submit.prevent="handleSubmit"
       >
         <ElFormItem label="用户名" prop="username">
-          <ElInput v-model="form.username" placeholder="3-20 位字母、数字或下划线" autocomplete="username" clearable />
+          <ElInput
+            v-model="form.username"
+            placeholder="3-20 位字母、数字或下划线"
+            autocomplete="username"
+            clearable
+          />
         </ElFormItem>
         <ElFormItem label="邮箱" prop="email">
-          <ElInput v-model="form.email" placeholder="用于接收投稿审核通知" autocomplete="email" clearable />
+          <ElInput
+            v-model="form.email"
+            placeholder="用于登录你的社区账号"
+            autocomplete="email"
+            clearable
+          />
         </ElFormItem>
         <ElFormItem label="密码" prop="password">
           <ElInput
@@ -144,7 +167,9 @@ async function handleSubmit() {
 
       <p class="auth-card__foot">
         已有账号？
-        <RouterLink :to="{ path: '/login', query: route.query }">直接登录</RouterLink>
+        <RouterLink :to="{ path: '/login', query: route.query }"
+          >直接登录</RouterLink
+        >
       </p>
     </div>
   </section>

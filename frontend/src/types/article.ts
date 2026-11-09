@@ -18,8 +18,11 @@ export interface Article {
   contentFormat: ContentFormat
   category: string
   tags: string[]
+  community: boolean
   status: ArticleStatus
   version: number
+  replyCount: number
+  likeCount: number
   viewCount: number
   bookmarkCount: number
   createdAt: string

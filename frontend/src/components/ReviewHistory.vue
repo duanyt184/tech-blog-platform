@@ -6,7 +6,7 @@ const labels = { SUBMITTED: '提交审核', WITHDRAWN: '撤回草稿', PUBLISHED
 </script>
 <template>
   <section v-if="events.length" class="review-history">
-    <h2>投稿记录</h2>
+    <h2>最近投稿反馈</h2>
     <ol>
       <li v-for="event in events" :key="event.id">
         <div><strong>{{ labels[event.action] }}</strong> · {{ event.actor }} <time>{{ formatTime(event.createdAt) }}</time></div>

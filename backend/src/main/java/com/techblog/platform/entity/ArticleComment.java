@@ -57,6 +57,7 @@ public class ArticleComment {
     public Article getArticle() { return article; }
     public ArticleComment getParent() { return parent; }
     public User getUser() { return user; }
+    public void setContent(String content) { this.content=content; }
     public String getContent() { return content; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

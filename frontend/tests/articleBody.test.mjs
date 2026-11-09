@@ -27,6 +27,7 @@ async function component(name) {
   return (await import(url)).default
 }
 const ArticleBody = await component('ArticleBody')
+await component('AppIcon')
 const MarkdownEditor = await component('MarkdownEditor')
 function rendered(content, format = 'MARKDOWN') {
   const result = renderArticleBody(content, format)

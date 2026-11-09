@@ -38,8 +38,8 @@ public class CommentController {
     }
 
     @GetMapping("/articles/{id}/comments")
-    public List<CommentResponse> list(@PathVariable Long id) {
-        return service.list(id);
+    public List<CommentResponse> list(@PathVariable Long id,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="50") int size) {
+        return service.list(id,page,size);
     }
 
     @PostMapping("/articles/{id}/comments")
@@ -48,6 +48,9 @@ public class CommentController {
             @AuthenticationPrincipal UserPrincipal principal) {
         return service.add(id, request, principal);
     }
+
+    @PutMapping("/comments/{id}")
+    public CommentResponse edit(@PathVariable Long id,@Valid @RequestBody CommentRequest request,@AuthenticationPrincipal UserPrincipal p){return service.edit(id,request,p);}
 
     @GetMapping("/my/comments")
     public MyCommentsResponse mine(@AuthenticationPrincipal UserPrincipal principal) {
