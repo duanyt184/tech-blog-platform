@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UserAvatar from './UserAvatar.vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { addComment, deleteComment, listComments, reportComment } from '../api/comments'
@@ -340,7 +341,7 @@ async function submitReply(node: CommentNode) {
           class="comment-item"
           :style="{ marginLeft: `${row.depth * 26}px` }"
         >
-          <span class="avatar">{{ row.node.author.slice(0, 1) }}</span>
+          <span class="avatar"><UserAvatar :user-id="row.node.authorId" :username="row.node.author" /></span>
           <div class="comment-item__main">
             <p class="comment-meta">
               <strong>{{ row.node.author }}</strong>

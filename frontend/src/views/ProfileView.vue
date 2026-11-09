@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UserAvatar from '../components/UserAvatar.vue'
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { http } from '../api/http'
@@ -58,7 +59,7 @@ function page(value: number) {
     <template v-else-if="profile && result"
       ><header class="user-profile-header">
         <div class="avatar profile-avatar">
-          {{ profile.username.slice(0, 1).toUpperCase() }}
+          <UserAvatar :user-id="profile.id" :username="profile.username" />
         </div>
         <div>
           <h1>{{ profile.username }}</h1>

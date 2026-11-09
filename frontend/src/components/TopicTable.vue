@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UserAvatar from './UserAvatar.vue'
 import type { Article } from '../types/article'
 import { categoryColor, formatCount, relativeTime } from '../utils/articles'
 defineProps<{ items: Article[]; compact?: boolean }>()
@@ -10,11 +11,9 @@ defineProps<{ items: Article[]; compact?: boolean }>()
       :key="a.id"
       :to="`/t/${a.id}`"
       class="latest-topic"
-      ><span
-        class="avatar"
-        :style="{ background: categoryColor(a.category) }"
-        >{{ a.author.slice(0, 1).toUpperCase() }}</span
-      >
+      ><span class="avatar" :style="{ background: categoryColor(a.category) }"
+        ><UserAvatar :user-id="a.authorId" :username="a.author"
+      /></span>
       <div class="latest-topic-main">
         <h3>{{ a.title }}</h3>
         <div class="topic-taxonomy">
@@ -69,8 +68,8 @@ defineProps<{ items: Article[]; compact?: boolean }>()
             :title="a.author"
             class="avatar"
             :style="{ background: categoryColor(a.category) }"
-            >{{ a.author.slice(0, 1).toUpperCase() }}</RouterLink
-          >
+            ><UserAvatar :user-id="a.authorId" :username="a.author"
+          /></RouterLink>
         </td>
         <td class="numeric">{{ formatCount(a.replyCount || 0) }}</td>
         <td class="numeric views-column">{{ formatCount(a.viewCount) }}</td>

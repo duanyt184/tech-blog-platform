@@ -6,6 +6,7 @@ import 'highlight.js/styles/github.css'
 import 'katex/dist/katex.min.css'
 import './styles/markdown.css'
 import './styles/composer.css'
+import './styles/personalization.css'
 
 createApp(App).use(router).mount('#app')
 

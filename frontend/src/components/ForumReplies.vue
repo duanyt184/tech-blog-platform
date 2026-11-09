@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UserAvatar from './UserAvatar.vue'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { http } from '../api/http'
@@ -162,8 +163,15 @@ async function report() {
     busy.value = false
   }
 }
-function loadMore(){page.value++;void load()}
-function cancel(){editing.value=undefined;parent.value=undefined;draft.value=''}
+function loadMore() {
+  page.value++
+  void load()
+}
+function cancel() {
+  editing.value = undefined
+  parent.value = undefined
+  draft.value = ''
+}
 </script>
 <template>
   <section class="forum-replies">
@@ -175,9 +183,9 @@ function cancel(){editing.value=undefined;parent.value=undefined;draft.value=''}
       :key="c.id"
       class="forum-post"
     >
-      <RouterLink :to="`/u/${c.authorId}`" class="avatar post-avatar">{{
-        c.author.slice(0, 1).toUpperCase()
-      }}</RouterLink>
+      <RouterLink :to="`/u/${c.authorId}`" class="avatar post-avatar"
+        ><UserAvatar :user-id="c.authorId" :username="c.author"
+      /></RouterLink>
       <div class="post-main">
         <div class="post-meta">
           <RouterLink :to="`/u/${c.authorId}`"
@@ -224,11 +232,7 @@ function cancel(){editing.value=undefined;parent.value=undefined;draft.value=''}
         </div>
       </div>
     </article>
-    <button
-      v-if="more"
-      class="tb-btn"
-      @click="loadMore"
-    >
+    <button v-if="more" class="tb-btn" @click="loadMore">
       Load more replies
     </button>
     <form

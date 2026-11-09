@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UserAvatar from './UserAvatar.vue'
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
@@ -107,7 +108,7 @@ async function logout() {
             aria-label="Account menu"
             @click="accountOpen = !accountOpen"
           >
-            {{ user.username.slice(0, 1).toUpperCase() }}
+            <UserAvatar :user-id="user.id" :username="user.username" />
           </button>
           <nav
             v-if="accountOpen"

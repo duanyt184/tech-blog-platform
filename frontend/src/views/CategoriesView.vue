@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UserAvatar from '../components/UserAvatar.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { categories, loadCategories, errorMessage } from '../utils/articles'
@@ -60,7 +61,8 @@ onMounted(load)
           class="featured-card"
           ><h3>{{ a.title }}</h3>
           <div>
-            <span class="avatar">{{ a.author.slice(0, 1).toUpperCase() }}</span
+            <span class="avatar"
+              ><UserAvatar :user-id="a.authorId" :username="a.author" /></span
             ><span>{{ a.author }}</span>
           </div></RouterLink
         >

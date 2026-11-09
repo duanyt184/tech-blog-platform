@@ -119,7 +119,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.GET, "/api/health", "/api/auth/csrf",
                                 "/api/articles", "/api/articles/*", "/api/articles/*/comments",
-                                "/api/categories", "/api/categories/stats", "/api/community/categories",
+                                "/api/categories", "/api/categories/stats", "/api/community/categories", "/api/profiles/*/avatar",
                                 "/api/community/users", "/api/profiles/*/summary", "/api/community/tags", "/api/community/rules", "/api/articles/*/stats", "/api/comments/*/likes", "/api/profiles/*/activity", "/api/profiles/*", "/api/profiles/*/articles", "/api/articles/*/likes").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/editor/**").hasAnyRole("EDITOR", "ADMIN")

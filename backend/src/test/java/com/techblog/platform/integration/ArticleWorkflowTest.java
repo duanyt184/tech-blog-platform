@@ -87,6 +87,51 @@ class ArticleWorkflowTest {
     long userId(MockHttpSession session) throws Exception { return tree(mvc.perform(get("/api/auth/me").session(session))).get("id").asLong(); }
     JsonNode approve(JsonNode published) { return published; }
 
+    @Test void personalNavigationPersistsSeparatelyForEachUserAndCanReset() throws Exception {
+        var category=tree(mvc.perform(get("/api/community/categories"))).get(0).get("id").asLong();
+        var preference=Map.of("categoryIds",List.of(category),"tagNames",List.of("Python","学习笔记"));
+        write(HttpMethod.PUT,"/api/my/navigation",author,preference).andExpect(status().isOk());
+        mvc.perform(get("/api/my/navigation").session(author)).andExpect(jsonPath("$.categoryIds[0]").value(category)).andExpect(jsonPath("$.tagNames[1]").value("学习笔记"));
+        mvc.perform(get("/api/my/navigation").session(other)).andExpect(jsonPath("$.categoryIds").isEmpty()).andExpect(jsonPath("$.tagNames").isEmpty());
+        write(HttpMethod.PUT,"/api/my/navigation",author,Map.of("categoryIds",List.of(),"tagNames",List.of())).andExpect(status().isOk()).andExpect(jsonPath("$.categoryIds").isArray()).andExpect(jsonPath("$.categoryIds").isEmpty());
+        var defaults=new HashMap<String,Object>(); defaults.put("categoryIds",null); defaults.put("tagNames",null);
+        write(HttpMethod.PUT,"/api/my/navigation",author,defaults).andExpect(status().isOk()).andExpect(jsonPath("$.categoryIds").isEmpty());
+        assertNull(jdbc.queryForObject("SELECT category_ids FROM user_navigation WHERE user_id=?",String.class,userId(author)));
+    }
+    @Test void navigationRejectsUnknownSelectionsAndRequiresAuthenticationAndCsrf() throws Exception {
+        mvc.perform(get("/api/my/navigation")).andExpect(status().isUnauthorized());
+        mvc.perform(put("/api/my/navigation").session(author).contentType(MediaType.APPLICATION_JSON).content("{}" )).andExpect(status().isForbidden());
+        write(HttpMethod.PUT,"/api/my/navigation",author,Map.of("categoryIds",List.of(999999999L))).andExpect(status().isBadRequest());
+        write(HttpMethod.PUT,"/api/my/navigation",author,Map.of("tagNames",List.of("not-a-real-tag"))).andExpect(status().isBadRequest());
+        write(HttpMethod.PUT,"/api/my/navigation",author,Map.of("tagNames",List.of("Python","Python"))).andExpect(status().isBadRequest());
+    }
+    byte[] avatarFixture() throws Exception {
+        var picture=new java.awt.image.BufferedImage(40,20,java.awt.image.BufferedImage.TYPE_INT_RGB);
+        var bytes=new java.io.ByteArrayOutputStream();javax.imageio.ImageIO.write(picture,"png",bytes);return bytes.toByteArray();
+    }
+    ResultActions uploadAvatar(MockHttpSession session,byte[] bytes) throws Exception {
+        var token=tree(mvc.perform(get("/api/auth/csrf").session(session)));
+        return mvc.perform(multipart("/api/my/avatar").file(new org.springframework.mock.web.MockMultipartFile("file","avatar.png","image/png",bytes)).session(session).header(token.get("headerName").asText(),token.get("token").asText()));
+    }
+    @Test void avatarIsNormalizedPersistedPublicAndOnlyOwnerCanChangeIt() throws Exception {
+        long id=userId(author),otherId=userId(other);
+        uploadAvatar(author,avatarFixture()).andExpect(status().isOk()).andExpect(jsonPath("$.revision").isString());
+        var publicImage=mvc.perform(get("/api/profiles/"+id+"/avatar")).andExpect(status().isOk()).andExpect(content().contentType("image/png")).andReturn().getResponse().getContentAsByteArray();
+        var decoded=javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(publicImage));assertEquals(256,decoded.getWidth());assertEquals(256,decoded.getHeight());
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM user_avatars WHERE user_id=?",Integer.class,id));
+        write(HttpMethod.DELETE,"/api/my/avatar",other,null).andExpect(status().isNoContent());
+        mvc.perform(get("/api/profiles/"+id+"/avatar")).andExpect(content().contentType("image/png"));
+        mvc.perform(get("/api/profiles/"+otherId+"/avatar")).andExpect(content().contentType("image/svg+xml"));
+        write(HttpMethod.DELETE,"/api/my/avatar",author,null).andExpect(status().isNoContent());
+        mvc.perform(get("/api/profiles/"+id+"/avatar")).andExpect(content().contentType("image/svg+xml"));
+    }
+    @Test void avatarRejectsNonImagesOversizedFilesAndUnprotectedWrites() throws Exception {
+        uploadAvatar(author,"<svg onload='alert(1)'/>".getBytes()).andExpect(status().isBadRequest());
+        uploadAvatar(author,new byte[2*1024*1024+1]).andExpect(status().isBadRequest());
+        mvc.perform(multipart("/api/my/avatar").file(new org.springframework.mock.web.MockMultipartFile("file",avatarFixture())).session(author)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/profiles/999999999/avatar")).andExpect(status().isNotFound());
+    }
+
     @Test void draftPrivateAndOrdinaryTopicPublishesImmediately() throws Exception {
         var d=draft(author); long id=d.get("id").asLong();
         mvc.perform(get("/api/articles/"+id)).andExpect(status().isNotFound());

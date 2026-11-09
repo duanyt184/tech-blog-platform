@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import SidebarNavigationEditor, {
+  type NavigationPreferences,
+} from './SidebarNavigationEditor.vue'
 import { useRoute } from 'vue-router'
 import { categories, loadCategories } from '../utils/articles'
 import { http } from '../api/http'
@@ -10,7 +13,56 @@ defineProps<{ open: boolean }>()
 const route = useRoute(),
   { user, isEditor } = useAuth(),
   { toggle } = useTheme()
-const tags = ref<{ name: string }[]>([])
+const tags = ref<{ name: string; count?: number }[]>([])
+const preferences = ref<NavigationPreferences>({
+  categoryIds: null,
+  tagNames: null,
+})
+const editing = ref<'categories' | 'tags' | null>(null)
+const preferencesReady = ref(false)
+const navigationError = ref('')
+let preferenceRequest = 0
+async function loadPreferences() {
+  const request = ++preferenceRequest
+  const id = user.value?.id
+  preferencesReady.value = false
+  navigationError.value = ''
+  preferences.value = { categoryIds: null, tagNames: null }
+  editing.value = null
+  if (!id) return
+  try {
+    const { data } = await http.get<NavigationPreferences>('/my/navigation')
+    if (request === preferenceRequest) {
+      preferences.value = data
+      preferencesReady.value = true
+    }
+  } catch {
+    if (request === preferenceRequest)
+      navigationError.value = 'Unable to load navigation preferences.'
+  }
+}
+watch(() => user.value?.id, loadPreferences, { immediate: true })
+const defaultCategoryIds = computed(() =>
+  categories.filter((c) => !c.parentId).map((c) => c.id),
+)
+const defaultTagNames = computed(() =>
+  tags.value.slice(0, 10).map((t) => t.name),
+)
+const visibleCategories = computed(() =>
+  categories.filter((c) =>
+    (preferences.value.categoryIds || defaultCategoryIds.value).includes(c.id),
+  ),
+)
+const visibleTags = computed(() =>
+  (preferences.value.tagNames || defaultTagNames.value).flatMap(
+    (name) => tags.value.find((t) => t.name === name) || [],
+  ),
+)
+function savedNavigation(value: NavigationPreferences) {
+  preferences.value = value
+  editing.value = null
+}
+
 const preferredTags = [
   'Python',
   'Java',
@@ -49,6 +101,10 @@ onMounted(async () => {
     aria-label="Main navigation"
   >
     <nav>
+      <p v-if="navigationError" class="sidebar-error" role="alert">
+        {{ navigationError }}
+        <button type="button" @click="loadPreferences">Retry</button>
+      </p>
       <RouterLink
         to="/"
         class="sidebar-link"
@@ -83,9 +139,22 @@ onMounted(async () => {
         ></template
       >
       <div class="nav-divider"></div>
-      <p class="nav-section-label">⌄ <span>Categories</span></p>
+      <p class="nav-section-label">
+        ⌄ <span>Categories</span
+        ><button
+          v-if="user"
+          type="button"
+          class="icon-button section-edit"
+          aria-label="Edit categories navigation"
+          title="Edit categories navigation"
+          :disabled="!preferencesReady"
+          @click="editing = 'categories'"
+        >
+          <AppIcon name="edit" :size="15" />
+        </button>
+      </p>
       <RouterLink
-        v-for="c in categories.filter((c) => !c.parentId)"
+        v-for="c in visibleCategories"
         :key="c.id"
         :to="{ path: '/articles', query: { category: c.name } }"
         class="sidebar-link"
@@ -100,9 +169,22 @@ onMounted(async () => {
         ><AppIcon name="list" :size="16" />All categories</RouterLink
       >
       <div class="nav-divider"></div>
-      <p class="nav-section-label">⌄ <span>Tags</span></p>
+      <p class="nav-section-label">
+        ⌄ <span>Tags</span
+        ><button
+          v-if="user"
+          type="button"
+          class="icon-button section-edit"
+          aria-label="Edit tags navigation"
+          title="Edit tags navigation"
+          :disabled="!preferencesReady"
+          @click="editing = 'tags'"
+        >
+          <AppIcon name="edit" :size="15" />
+        </button>
+      </p>
       <RouterLink
-        v-for="t in tags.slice(0, 10)"
+        v-for="t in visibleTags"
         :key="t.name"
         :to="{ path: '/articles', query: { tag: t.name } }"
         class="sidebar-link"
@@ -134,5 +216,16 @@ onMounted(async () => {
         <AppIcon name="sun" :size="17" />
       </button>
     </div>
+    <SidebarNavigationEditor
+      v-if="editing"
+      :kind="editing"
+      :categories="categories"
+      :tags="tags"
+      :preferences="preferences"
+      :default-category-ids="defaultCategoryIds"
+      :default-tag-names="defaultTagNames"
+      @close="editing = null"
+      @saved="savedNavigation"
+    />
   </aside>
 </template>

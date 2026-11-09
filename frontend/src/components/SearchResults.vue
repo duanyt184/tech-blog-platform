@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UserAvatar from './UserAvatar.vue'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { Article } from '../types/article'
@@ -56,9 +57,9 @@ watch(
   <p v-if="loading" class="empty-state">Loading…</p>
   <template v-else-if="kind === 'users'"
     ><article v-for="u in users" :key="u.id" class="search-result">
-      <RouterLink :to="`/u/${u.id}`" class="avatar">{{
-        u.username.slice(0, 1).toUpperCase()
-      }}</RouterLink>
+      <RouterLink :to="`/u/${u.id}`" class="avatar"
+        ><UserAvatar :user-id="u.id" :username="u.username"
+      /></RouterLink>
       <div>
         <RouterLink :to="`/u/${u.id}`"
           ><h2>{{ u.displayName || u.username }}</h2></RouterLink
@@ -95,8 +96,8 @@ watch(
         :to="`/u/${a.authorId}`"
         class="avatar"
         :style="{ background: categoryColor(a.category) }"
-        >{{ a.author.slice(0, 1).toUpperCase() }}</RouterLink
-      >
+        ><UserAvatar :user-id="a.authorId" :username="a.author"
+      /></RouterLink>
       <div>
         <RouterLink :to="`/t/${a.id}`"
           ><h2>{{ a.title }}</h2></RouterLink

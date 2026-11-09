@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UserAvatar from '../components/UserAvatar.vue'
 import { ref, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -157,8 +158,8 @@ function reply(withQuote = false) {
             :to="`/u/${article.authorId}`"
             class="avatar post-avatar"
             :style="{ background: categoryColor(article.category) }"
-            >{{ article.author.slice(0, 1).toUpperCase() }}</RouterLink
-          >
+            ><UserAvatar :user-id="article.authorId" :username="article.author"
+          /></RouterLink>
           <div class="post-main">
             <div class="post-meta">
               <RouterLink :to="`/u/${article.authorId}`"

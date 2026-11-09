@@ -8,6 +8,9 @@ const media = window.matchMedia('(prefers-color-scheme: dark)')
 function apply() {
   document.documentElement.dataset.theme =
     theme.value === 'system' ? (media.matches ? 'dark' : 'light') : theme.value
+  const icon = document.querySelector<HTMLLinkElement>('#site-favicon')
+  if (icon)
+    icon.href = `/favicon${document.documentElement.dataset.theme === 'dark' ? '-dark' : ''}.svg?v=mashang-3`
 }
 media.addEventListener('change', apply)
 watch(

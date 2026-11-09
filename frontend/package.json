@@ -13,7 +13,8 @@
     "preview": "vite preview",
     "type-check": "vue-tsc --noEmit",
     "test": "node tests/articleBody.test.mjs && node tests/community.test.mjs",
-    "test:e2e": "node tests/forum.e2e.mjs"
+    "test:e2e": "node tests/forum.e2e.mjs",
+    "test:personalization": "node tests/personalization.e2e.mjs"
   },
   "dependencies": {
     "axios": "^1.20.0",
