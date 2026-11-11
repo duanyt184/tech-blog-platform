@@ -1,6 +1,13 @@
 <script setup lang="ts">
 withDefaults(defineProps<{ name: string; size?: number }>(), { size: 20 })
 const paths: Record<string, string> = {
+  compose: 'M15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9M13 13l-4 1 1-4L18 2a2.1 2.1 0 0 1 3 3Z',
+  'double-left': 'm13 5-7 7 7 7m6-14-7 7 7 7',
+  'double-right': 'm5 5 7 7-7 7m6-14 7 7-7 7',
+  heading: 'M3 5h10M8 5v14M5 19h6M15 11h6M18 11v8M16 19h4',
+  upload: 'M12 16V3m-5 5 5-5 5 5M4 15v6h16v-6',
+  'circle-plus': 'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0M8 12h8M12 8v8',
+  markdown: 'M2 5h20v14H2ZM5 15V9l3 3 3-3v6M17 9v6m-2-2 2 2 2-2',
   menu: 'M4 6h16M4 12h16M4 18h16',
   list: 'M9 5h12M9 12h12M9 19h12M3 5h1M3 12h1M3 19h1',
   tag: 'M3 3h8l10 10-8 8L3 11ZM7.5 7.5h.01',

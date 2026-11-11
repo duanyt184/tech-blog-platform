@@ -196,9 +196,8 @@ try {
   await page
     .getByLabel('Topic title', { exact: true })
     .fill('Browser verification ' + stamp)
-  await page
-    .getByLabel('Category', { exact: true })
-    .selectOption({ label: '软件工程' })
+  await page.getByRole('button', { name: 'Category', exact: true }).click()
+  await page.getByRole('option', { name: /软件工程/ }).click()
   await page.getByLabel('Tags', { exact: true }).fill('testing, workflow')
   await page
     .getByLabel('Markdown 正文', { exact: true })
@@ -230,19 +229,17 @@ try {
     await page.getByLabel('Markdown 正文', { exact: true }).inputValue(),
     draftBody,
   )
-  await page.getByRole('button', { name: 'Expand editor', exact: true }).click()
-  assert.ok(
-    await page
-      .locator('.topic-composer')
-      .evaluate((el) => el.clientHeight >= innerHeight - 52),
-  )
-  await page
-    .getByRole('button', { name: 'Exit full screen', exact: true })
-    .click()
+  await page.getByRole('separator', { name: 'Resize editor' }).dblclick()
+  await page.waitForFunction(() => document.querySelector('.topic-composer').clientHeight >= innerHeight - 52)
+  await page.locator('.composer-heading').dblclick()
+  await page.waitForFunction(() => !document.querySelector('.topic-composer').classList.contains('is-expanded'))
+  await page.getByRole('button', { name: 'Hide preview', exact: true }).click()
+  assert.equal(await page.locator('.editor-preview').count(), 0)
+  await page.getByRole('button', { name: 'Show preview', exact: true }).click()
   checks.push('Docked composer minimizes and expands without losing text')
-  await page.getByRole('button', { name: 'Save Draft', exact: true }).click()
-  await page.waitForURL(/\/write\/\d+$/)
-  const topicId = Number(page.url().split('/').pop())
+  assert.equal(await page.getByRole('button', { name: 'Save Draft', exact: true }).count(), 0)
+  await page.locator('.draft-status').filter({ hasText: /^Saved$/ }).waitFor()
+  const topicId = Number(await page.locator('.topic-composer').getAttribute('data-draft-id'))
   await page.reload()
   await page.getByLabel('Topic title', { exact: true }).waitFor()
   assert.equal(

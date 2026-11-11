@@ -108,6 +108,7 @@ const router = createRouter({
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior: (to, _from, savedPosition) => {
+    if (to.name === 'write' || _from.name === 'write') return false
     // 评论定位：/article/3#comment-12 优先滚动到对应评论
     if (to.hash) {
       return { el: to.hash, top: 96, behavior: 'smooth' }

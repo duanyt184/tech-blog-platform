@@ -1,9 +1,24 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, defineAsyncComponent, ref, shallowRef, watch } from 'vue'
+import { useRoute, useRouter, type RouteLocationNormalizedLoaded } from 'vue-router'
+import ForumPage from './components/ForumPage.vue'
+const ArticlesView = defineAsyncComponent(() => import('./views/ArticlesView.vue'))
 import AppHeader from './components/AppHeader.vue'
 import AppSidebar from './components/AppSidebar.vue'
 import { useTheme } from './composables/useTheme'
 useTheme()
+const route = useRoute()
+const router = useRouter()
+const composing = computed(() => route.name === 'write')
+const fallback = router.resolve('/latest')
+const background = shallowRef<RouteLocationNormalizedLoaded>({
+  ...fallback,
+  name: fallback.name ?? undefined,
+  matched: fallback.matched.map(record => ({ ...record, components: { default: ArticlesView } })),
+})
+watch(() => route.fullPath, () => {
+  if (!composing.value) background.value = { ...route }
+}, { immediate: true })
 const menuOpen = ref(window.innerWidth > 900)
 </script>
 <template>
@@ -25,7 +40,8 @@ const menuOpen = ref(window.innerWidth > 900)
       ></button>
       <AppSidebar :open="menuOpen" />
       <main id="main-content" class="app-main" tabindex="-1">
-        <RouterView />
+        <ForumPage :route="background" />
+        <RouterView v-if="composing" :key="String(route.params.id || 'new')" />
       </main>
     </div>
   </div>

@@ -8,6 +8,8 @@ const props = defineProps<{
   contentFormat: ContentFormat
   disabled?: boolean
   compact?: boolean
+  preview?: boolean
+  placeholder?: string
 }>()
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -15,10 +17,39 @@ const emit = defineEmits<{
 }>()
 const editor = ref<HTMLTextAreaElement | null>(null)
 const mode = ref<'edit' | 'split' | 'preview'>(
-  props.compact && window.innerWidth > 760 ? 'split' : 'edit',
+  props.compact && (props.preview ?? window.innerWidth >= 640) ? 'split' : 'edit',
 )
 const previewContent = ref(props.modelValue)
 const feedback = ref('')
+const popup = ref<'emoji' | 'image' | 'gif' | 'more' | null>(null)
+const mediaUrl = ref('')
+const mediaError = ref('')
+watch(() => props.preview, value => {
+  if (value !== undefined) changeMode(value ? (window.innerWidth >= 640 ? 'split' : 'preview') : 'edit')
+})
+watch(() => props.disabled, value => { if (value) popup.value = null })
+function togglePopup(value: typeof popup.value) {
+  if (props.disabled) return
+  popup.value = popup.value === value ? null : value
+  mediaError.value = ''
+}
+async function insertMedia() {
+  try {
+    const url = new URL(mediaUrl.value)
+    if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Invalid URL')
+    await insert({ label: '图片', before: '![', after: `](<${url.href.replace(/>/g, '%3E')}>)`, sample: popup.value === 'gif' ? 'GIF' : 'image' })
+    popup.value = null
+    mediaUrl.value = ''
+  } catch { mediaError.value = 'Enter an http:// or https:// image URL.' }
+}
+function setFormat(value: ContentFormat) {
+  if (props.disabled) return
+  clearTimeout(timer)
+  previewContent.value = props.modelValue
+  emit('update:contentFormat', value)
+  popup.value = null
+}
+
 let timer: ReturnType<typeof setTimeout> | undefined
 watch(
   () => props.modelValue,
@@ -60,6 +91,7 @@ const tools = [
     sample: '图片说明',
   },
   { label: '引用', before: '\n\n> ', after: '\n', sample: '引用内容' },
+  { label: '有序列表', before: '\n\n1. ', after: '\n2. 下一项\n', sample: '列表项' },
   { label: '列表', before: '\n\n- ', after: '\n- 下一项\n', sample: '列表项' },
   { label: '待办', before: '\n\n- [ ] ', after: '\n', sample: '待完成事项' },
   {
@@ -83,24 +115,17 @@ const tools = [
   },
 ]
 const icons: Record<string, string> = {
+  标题: 'heading',
   粗体: 'bold',
   斜体: 'italic',
   链接: 'link',
   引用: 'quote',
   代码: 'code',
-  图片: 'image',
+  图片: 'upload',
   列表: 'list',
+  有序列表: 'ordered',
 }
-const primaryLabels = ['粗体', '斜体', '链接', '引用', '代码', '图片', '列表']
-function togglePreview() {
-  changeMode(
-    mode.value === 'edit'
-      ? window.innerWidth > 760
-        ? 'split'
-        : 'preview'
-      : 'edit',
-  )
-}
+const primaryLabels = ['粗体', '斜体', '标题', '链接', '引用', '代码', '图片', '列表']
 async function insert(tool: (typeof tools)[number]) {
   if (props.disabled || props.contentFormat !== 'MARKDOWN' || !editor.value)
     return
@@ -157,7 +182,7 @@ function changeFormat(event: Event) {
 <template>
   <section
     class="markdown-editor"
-    :class="{ 'is-compact': compact }"
+    :class="{ 'is-compact': compact, 'has-preview': mode !== 'edit', 'preview-only': mode === 'preview' }"
     aria-label="文章正文编辑器"
   >
     <div v-if="!compact" class="editor-toolbar">
@@ -193,85 +218,36 @@ function changeFormat(event: Event) {
       }}
       切换格式保留正文，只改变显示方式。
     </p>
-    <div
-      v-if="compact"
-      class="composer-format-toolbar"
-      role="group"
-      aria-label="Formatting toolbar"
-    >
-      <template v-if="contentFormat === 'MARKDOWN'">
-        <button
-          v-for="label in primaryLabels"
-          :key="label"
-          type="button"
-          class="icon-button"
-          :title="label"
-          :aria-label="label"
-          :disabled="disabled"
-          @mousedown.prevent
-          @click="insert(tools.find((tool) => tool.label === label)!)"
-        >
-          <AppIcon :name="icons[label]!" :size="18" />
-        </button>
-        <button
-          type="button"
-          class="icon-button"
-          aria-label="Insert emoji"
-          title="Insert emoji"
-          :disabled="disabled"
-          @mousedown.prevent
-          @click="
-            insert({ label: '表情', before: '', after: '', sample: '🙂' })
-          "
-        >
-          <AppIcon name="smile" :size="18" />
-        </button>
-      </template>
-      <details class="composer-more-tools">
-        <summary
-          class="icon-button"
-          aria-label="More formatting"
-          title="More formatting"
-        >
-          ⋯
-        </summary>
-        <div class="composer-tools-menu">
-          <label
-            >正文格式<select
-              :value="contentFormat"
-              :disabled="disabled"
-              @change="changeFormat"
-            >
-              <option value="MARKDOWN">Markdown</option>
-              <option value="PLAIN_TEXT">纯文本</option>
-            </select></label
-          >
-          <template v-if="contentFormat === 'MARKDOWN'"
-            ><button
-              v-for="tool in tools.filter(
-                (tool) => !primaryLabels.includes(tool.label),
-              )"
-              :key="tool.label"
-              type="button"
-              :disabled="disabled"
-              @mousedown.prevent
-              @click="insert(tool)"
-            >
-              {{ tool.label }}
-            </button></template
-          >
+    <div v-if="compact" class="composer-format-toolbar" role="group" aria-label="Formatting toolbar" :class="{ 'is-disabled': disabled }" @keydown.esc.stop="popup = null">
+      <div class="composer-toolbar-scroll">
+        <div class="composer-format-switch" role="group" aria-label="Text format">
+          <button type="button" class="icon-button" title="Markdown" aria-label="Markdown" :aria-pressed="contentFormat === 'MARKDOWN'" :disabled="disabled" @click="setFormat('MARKDOWN')"><AppIcon name="markdown" :size="18" /></button>
+          <button type="button" class="icon-button format-text" title="Plain text" aria-label="Plain text" :aria-pressed="contentFormat === 'PLAIN_TEXT'" :disabled="disabled" @click="setFormat('PLAIN_TEXT')">A</button>
         </div>
-      </details>
-      <button
-        type="button"
-        class="icon-button composer-preview-toggle"
-        aria-label="Toggle preview"
-        :aria-pressed="mode !== 'edit'"
-        title="Toggle preview"
-        @click="togglePreview"
-      >
-        <AppIcon name="eye" :size="18" />
-      </button>
+        <button v-for="label in primaryLabels" :key="label" type="button" class="icon-button"
+          :title="label === '图片' ? 'Insert image from URL' : label" :aria-label="label"
+          :disabled="disabled || contentFormat !== 'MARKDOWN'" @mousedown.prevent
+          @click="label === '图片' ? togglePopup('image') : insert(tools.find(tool => tool.label === label)!)">
+          <AppIcon :name="icons[label]!" :size="16" />
+        </button>
+        <button type="button" class="icon-button" aria-label="Insert emoji" title="Insert emoji" :disabled="disabled || contentFormat !== 'MARKDOWN'" :aria-expanded="popup === 'emoji'" @mousedown.prevent @click="togglePopup('emoji')"><AppIcon name="smile" :size="17" /></button>
+        <button type="button" class="icon-button composer-gif" aria-label="Insert GIF from URL" title="Insert GIF from URL" :disabled="disabled || contentFormat !== 'MARKDOWN'" :aria-expanded="popup === 'gif'" @mousedown.prevent @click="togglePopup('gif')">GIF</button>
+        <button type="button" class="icon-button" aria-label="More formatting" title="More formatting" :disabled="disabled" :aria-expanded="popup === 'more'" @mousedown.prevent @click="togglePopup('more')"><AppIcon name="circle-plus" :size="16" /></button>
+      </div>
+      <div v-if="popup === 'more'" class="composer-tools-menu">
+        <template v-if="contentFormat === 'MARKDOWN'">
+          <button v-for="tool in tools.filter(tool => !primaryLabels.includes(tool.label))" :key="tool.label" type="button" :disabled="disabled" @mousedown.prevent @click="insert(tool); popup = null">{{ tool.label }}</button>
+        </template>
+        <p v-else>Switch to Markdown to use formatting.</p>
+      </div>
+      <div v-if="popup === 'emoji'" class="composer-tools-menu composer-emoji-menu" aria-label="Emoji">
+        <button v-for="emoji in ['🙂', '😀', '😊', '🎉', '👍', '❤️', '🚀', '👀', '🤔', '✅']" :key="emoji" type="button" :aria-label="emoji" @mousedown.prevent @click="insert({ label: '表情', before: '', after: '', sample: emoji }); popup = null">{{ emoji }}</button>
+      </div>
+      <div v-if="popup === 'image' || popup === 'gif'" class="composer-tools-menu composer-media-menu">
+        <label>{{ popup === 'gif' ? 'GIF URL' : 'Image URL' }}<input v-model="mediaUrl" type="url" placeholder="https://…" @keydown.enter.stop.prevent="insertMedia" /></label>
+        <p v-if="mediaError" role="alert">{{ mediaError }}</p>
+        <button type="button" @click="insertMedia">Insert</button>
+      </div>
     </div>
     <div
       v-if="!compact && contentFormat === 'MARKDOWN' && mode !== 'preview'"
@@ -318,11 +294,11 @@ function changeFormat(event: Event) {
           contentFormat === 'MARKDOWN' ? 'Markdown 正文' : '纯文本正文'
         "
         :placeholder="
-          compact
+          placeholder || (compact
             ? 'Type here. Use Markdown to format your post.'
             : contentFormat === 'MARKDOWN'
               ? '用 Markdown 记录实践：标题、列表、表格、代码和 LaTeX 公式…'
-              : '在这里记录你的技术实践…'
+              : '在这里记录你的技术实践…')
         "
         spellcheck="false"
       ></textarea>
@@ -332,7 +308,7 @@ function changeFormat(event: Event) {
           :content="previewContent"
           :content-format="contentFormat"
         />
-        <p v-else class="field-hint">填写正文后可以预览。</p>
+        <p v-else-if="!compact" class="field-hint">填写正文后可以预览。</p>
       </div>
     </div>
     <p v-if="feedback" class="error-message" role="alert">{{ feedback }}</p>
